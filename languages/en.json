@@ -1,0 +1,17 @@
+{
+  "WOD20HM.PlaceHealthMonitor": "Place Health Monitor",
+  "WOD20HM.PlacementHint": "Tiles layer: click the scene to place a health monitor tile. Press Esc or pick another tool to cancel.",
+  "WOD20HM.PlacementCancelled": "Health monitor placement cancelled.",
+  "WOD20HM.ConfigTitle": "Health Monitor — Link Actor",
+  "WOD20HM.ConfigBlurb": "Choose a character or NPC whose health track this tile should mirror. Symbols match the sheet: / (bashing), X (lethal), * (aggravated).",
+  "WOD20HM.ActorLabel": "Actor",
+  "WOD20HM.NoActorOption": "— None —",
+  "WOD20HM.Save": "Save",
+  "WOD20HM.Unlink": "Unlink",
+  "WOD20HM.Close": "Close",
+  "WOD20HM.ContextConfigure": "Link Actor / Configure",
+  "WOD20HM.HudConfigure": "Link actor",
+  "WOD20HM.ErrNoCanvas": "Canvas is not ready; open a scene first.",
+  "WOD20HM.ErrWrongSystem": "This module requires the WoD20 system to be active.",
+  "WOD20HM.ErrNoPermission": "You do not have permission to modify this scene’s tiles."
+}

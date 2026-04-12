@@ -1,0 +1,21 @@
+.wod20hm-config .notes {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text-dark-secondary, #555);
+}
+
+.wod20hm-config select {
+  width: 100%;
+}
+
+.wod20hm-tile-hud {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.wod20hm-tile-hud-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+}

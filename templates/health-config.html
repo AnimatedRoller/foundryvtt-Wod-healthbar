@@ -1,0 +1,12 @@
+<form class="wod20hm-config">
+  <p class="notes">{{blurb}}</p>
+  <div class="form-group">
+    <label for="wod20hm-actor">{{actorLabel}}</label>
+    <select id="wod20hm-actor" name="actorId">
+      <option value="">{{noActorOption}}</option>
+      {{#each actors}}
+      <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}} ({{this.type}})</option>
+      {{/each}}
+    </select>
+  </div>
+</form>
