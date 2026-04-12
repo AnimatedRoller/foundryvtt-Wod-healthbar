@@ -30,7 +30,7 @@
       "path": "languages/en.json"
     }
   ],
-  "url": "https://github.com/your-github/wod20-health-monitor",
-  "manifest": "https://raw.githubusercontent.com/your-github/wod20-health-monitor/main/module.json",
-  "download": "https://github.com/your-github/wod20-health-monitor/archive/main.zip"
+  "url": "https://github.com/AnimatedRoller/foundryvtt-Wod-healthbar",
+  "manifest": "https://raw.githubusercontent.com/AnimatedRoller/foundryvtt-Wod-healthbar/main/module.json",
+  "download": "https://github.com/AnimatedRoller/foundryvtt-Wod-healthbar/archive/refs/heads/main.zip"
 }

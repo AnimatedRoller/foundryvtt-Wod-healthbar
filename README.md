@@ -15,7 +15,11 @@ A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for the **W
 ## Installation
 
 1. In Foundry, open **Add-on Modules** → **Install Module**.
-2. Paste your **manifest URL** (from `module.json` once the package is hosted), or install from a local folder by pointing Foundry at this directory.
+2. Paste this **manifest URL** into the field at the bottom and click **Install**:
+
+   `https://raw.githubusercontent.com/AnimatedRoller/foundryvtt-Wod-healthbar/main/module.json`
+
+   (Or install from a local folder by pointing Foundry at a copy of this repository.)
 3. In your world, enable **WoD20 Health Monitor** under **Module Management**.
 
 ---
@@ -83,4 +87,4 @@ You can link **several** tiles to the **same** actor. All of them refresh when t
 - **Flags** on each monitor tile live under that scope (`actorId`, `boxWidth`, `boxHeight`, `numBoxes`).  
 - Health graphics are **generated SVG** data URLs; no image assets are required for default behaviour.
 
-Update `url`, `manifest`, and `download` in `module.json` when you publish to GitHub.
+`module.json` includes `url`, `manifest`, and `download` for this repo; bump **version** there when you release updates so clients can check for updates.
