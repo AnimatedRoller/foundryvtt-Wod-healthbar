@@ -7,7 +7,7 @@ A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for the **W
 ## Requirements
 
 - **Foundry VTT** v13 or newer  
-- **WoD20** system active in the world  
+- **WoD20** (recommended): health is read from `actor.system.health.track` as on the WoD20 sheet. Other systems may install and use the module for testing if actors expose a compatible `system.health.track` array.  
 - Permission to **create or update tiles** on the scene (typically the GM, or anyone your table allows to edit the scene)
 
 ---
@@ -73,7 +73,7 @@ You can link **several** tiles to the **same** actor. All of them refresh when t
 
 | Issue | What to check |
 |--------|----------------|
-| **Place Health Monitor** does not appear | WoD20 must be the **active system**. The tool is hidden in other systems. |
+| **Place Health Monitor** does not appear | Confirm you are on the **Tiles** layer with permission to edit the scene; restart Foundry after install if the package list looks stale. |
 | Nothing happens when placing | Stay on the **Tiles** layer; placement listens while that layer is active. Use **Esc** and try the tool again. |
 | Tile shows “Linked actor missing” | The linked actor was **deleted** from the world. Open **Link Actor / Configure** and link a valid actor or **Unlink**. |
 | Symbols do not match the sheet | The module reads `actor.system.health.track`. If your sheet or modules store health elsewhere, they may not match until data matches the WoD20 shape described in the module specification. |

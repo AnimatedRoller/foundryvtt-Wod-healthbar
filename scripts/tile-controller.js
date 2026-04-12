@@ -17,10 +17,6 @@ let placementActive = false;
 let placementPointerHandler = null;
 let placementKeyHandler = null;
 
-export function isWoD20System() {
-  return game.system?.id === "WoD20";
-}
-
 export async function createHealthMonitorTileAt(canvasPoint) {
   const scene = canvas.scene;
   if (!scene) return null;
@@ -87,11 +83,6 @@ async function beginPlacementMode() {
     ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoCanvas"));
     return;
   }
-  if (!isWoD20System()) {
-    ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrWrongSystem"));
-    return;
-  }
-
   endPlacementMode();
   try {
     await ui.controls?.activate?.({ control: "tiles" });
@@ -137,7 +128,7 @@ export function registerSceneControls() {
       icon: "fa-solid fa-heart-pulse",
       order: Object.keys(tiles.tools).length,
       button: true,
-      visible: isWoD20System(),
+      visible: true,
       onChange: () => {
         const mayEdit =
           game.user?.isGM ||
@@ -266,9 +257,9 @@ export function registerTileUiHooks() {
 
 export function registerReadyWarnings() {
   Hooks.once("ready", () => {
-    if (!isWoD20System()) {
-      console.warn(
-        `${MODULE_ID} | WoD20 system is not active; health monitor tools are hidden and tiles will not track sheets.`
+    if (game.system?.id !== "WoD20") {
+      console.info(
+        `${MODULE_ID} | Active system is "${game.system?.id ?? "unknown"}"; tiles use actor.system.health.track when present (WoD20 layout).`
       );
     }
   });
