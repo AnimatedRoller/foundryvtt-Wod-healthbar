@@ -127,12 +127,12 @@ export function generateHealthSVG(
     boxes.push(`
       <g>
         <rect x="${x}" y="0" width="${boxWidth}" height="${boxHeight}"
-          fill="#f0f0f0" stroke="#000" stroke-width="2"/>
+          fill="transparent" stroke="#fff" stroke-width="2"/>
         <text x="${x + boxWidth / 2}" y="${boxHeight / 2}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${Math.floor(boxHeight * 0.45)}"
           font-weight="bold"
-          fill="#111"
+          fill="#fff"
           text-anchor="middle"
           dominant-baseline="central">${escapeXml(symbol)}</text>
       </g>`);

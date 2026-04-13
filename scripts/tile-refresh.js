@@ -42,7 +42,7 @@ export async function refreshHealthMonitorTile(tileDocument) {
     const svg = generateHealthSVG(track, boxW, boxH, { mode });
     let src;
     try {
-      src = await uploadSvgAsWorldTexture(svg, tileDocument.id);
+      src = await uploadSvgAsWorldTexture(svg, tileDocument.id, Date.now());
     } catch (e) {
       console.error(`${MODULE_ID} | SVG upload failed`, e);
       ui.notifications?.error(
@@ -58,6 +58,8 @@ export async function refreshHealthMonitorTile(tileDocument) {
           numBoxes: len,
         },
       };
+      payload.width = len * boxW;
+      payload.height = boxH;
     }
     await tileDocument.update(payload);
     return;
@@ -66,7 +68,7 @@ export async function refreshHealthMonitorTile(tileDocument) {
   const svg = generateHealthSVG(track, boxW, boxH, { mode });
   let src;
   try {
-    src = await uploadSvgAsWorldTexture(svg, tileDocument.id);
+    src = await uploadSvgAsWorldTexture(svg, tileDocument.id, Date.now());
   } catch (e) {
     console.error(`${MODULE_ID} | SVG upload failed`, e);
     ui.notifications?.error(game.i18n.localize("WOD20HM.ErrTextureUpload"));

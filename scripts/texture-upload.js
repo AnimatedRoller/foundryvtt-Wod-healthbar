@@ -4,14 +4,14 @@ import { MODULE_ID } from "./constants.js";
  * Foundry validates tile texture.src and rejects data: URLs (no file extension).
  * Upload SVG to world data and return a path Foundry accepts (ends with .svg).
  */
-export async function uploadSvgAsWorldTexture(svgString, tileDocumentId) {
+export async function uploadSvgAsWorldTexture(svgString, tileDocumentId, versionTag = Date.now()) {
   const world = game.world;
   if (!world?.id) {
     throw new Error(`${MODULE_ID}: no active world`);
   }
 
   const dirPath = `worlds/${world.id}/${MODULE_ID}`;
-  const fileName = `tile-${tileDocumentId}.svg`;
+  const fileName = `tile-${tileDocumentId}-${versionTag}.svg`;
   const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
   const file = new File([blob], fileName, { type: "image/svg+xml" });
 

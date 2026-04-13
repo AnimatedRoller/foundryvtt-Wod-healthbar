@@ -143,10 +143,18 @@ export function registerSceneControls() {
 }
 
 function actorHealthTrackChanged(changes) {
-  return (
-    foundry.utils.hasProperty(changes, "system.health.track") ||
-    foundry.utils.hasProperty(changes, "system.health.damage") ||
-    foundry.utils.hasProperty(changes, "system.traits.health.totalhealthlevels")
+  const flat = foundry.utils.flattenObject(changes ?? {});
+  return Object.keys(flat).some((k) =>
+    k.startsWith("system.health.track") ||
+    k.startsWith("system.health.damage") ||
+    k.startsWith("system.traits.health.totalhealthlevels") ||
+    k.startsWith("system.health.bruised") ||
+    k.startsWith("system.health.hurt") ||
+    k.startsWith("system.health.injured") ||
+    k.startsWith("system.health.wounded") ||
+    k.startsWith("system.health.mauled") ||
+    k.startsWith("system.health.crippled") ||
+    k.startsWith("system.health.incapacitated")
   );
 }
 

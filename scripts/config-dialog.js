@@ -4,6 +4,7 @@ import {
   MODULE_ID,
 } from "./constants.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
+import { parseHealthTrackFromActor } from "./health-svg.js";
 
 function dialogRoot(html) {
   if (html instanceof HTMLElement) return html;
@@ -61,10 +62,7 @@ export async function openHealthConfigDialog(tileDocument) {
               });
 
               const actor = id ? game.actors.get(id) : null;
-              const trackLen =
-                actor && Array.isArray(actor.system?.health?.track)
-                  ? actor.system.health.track.length
-                  : null;
+              const trackLen = actor ? parseHealthTrackFromActor(actor).track.length : null;
               const boxes =
                 trackLen && trackLen > 0 ? trackLen : 7;
               const width = boxes * (next.boxWidth || DEFAULT_BOX_WIDTH);
