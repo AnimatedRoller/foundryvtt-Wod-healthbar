@@ -5,7 +5,7 @@ import {
   MODULE_ID,
 } from "./constants.js";
 
-export const HEALTH_BOX_GAP = 6;
+export const HEALTH_BOX_GAP = 12;
 const LEVEL_LABEL_HEIGHT = 20;
 const FOOTER_LABEL_HEIGHT = 26;
 const DEFAULT_LEVEL_LABELS = [
@@ -17,6 +17,12 @@ const DEFAULT_LEVEL_LABELS = [
   "crippled",
   "incapacitated",
 ];
+const BOX_ASSET = `modules/${MODULE_ID}/Box.png`;
+const ICON_BY_SYMBOL = {
+  "/": `modules/${MODULE_ID}/slash.png`,
+  X: `modules/${MODULE_ID}/Cross.png`,
+  "*": `modules/${MODULE_ID}/Star.png`,
+};
 
 /**
  * Map WoD20 health track cell values to the symbol shown in each box.
@@ -40,12 +46,15 @@ export function mapStatusToSymbol(status) {
  */
 export function parseHealthTrackFromActor(actor) {
   const raw = actor?.system?.health?.track;
+  const expectedBoxes = getExpectedHealthBoxCount(actor?.system);
   if (Array.isArray(raw)) {
-    return { track: raw.map((v) => String(v)), valid: true };
+    const parsed = raw.map((v) => String(v));
+    while (parsed.length < expectedBoxes) parsed.push("healthy");
+    return { track: parsed, valid: true };
   }
 
   // WoD20 often stores health as damage counts instead of a string track array.
-  const fromDamage = buildTrackFromDamage(actor?.system);
+  const fromDamage = buildTrackFromDamage(actor?.system, expectedBoxes);
   if (fromDamage) {
     return { track: fromDamage, valid: true };
   }
@@ -59,7 +68,7 @@ export function parseHealthTrackFromActor(actor) {
   };
 }
 
-function buildTrackFromDamage(systemData) {
+function buildTrackFromDamage(systemData, expectedBoxes = DEFAULT_FALLBACK_BOXES) {
   const damage = systemData?.health?.damage;
   if (!damage || typeof damage !== "object") return null;
 
@@ -68,10 +77,12 @@ function buildTrackFromDamage(systemData) {
   const aggravated = asNonNegativeInt(damage.aggravated);
   const totalDamage = bashing + lethal + aggravated;
 
-  const totalHealthLevels =
+  const totalHealthLevels = Math.max(
+    expectedBoxes,
     asNonNegativeInt(systemData?.traits?.health?.totalhealthlevels?.value) ||
-    estimateHealthLevelsFromMap(systemData?.health) ||
-    DEFAULT_FALLBACK_BOXES;
+      estimateHealthLevelsFromMap(systemData?.health) ||
+      DEFAULT_FALLBACK_BOXES
+  );
 
   if (!totalDamage && !totalHealthLevels) return null;
 
@@ -112,6 +123,14 @@ function asNonNegativeInt(value) {
   return Math.floor(n);
 }
 
+function getExpectedHealthBoxCount(systemData) {
+  return (
+    asNonNegativeInt(systemData?.traits?.health?.totalhealthlevels?.value) ||
+    estimateHealthLevelsFromMap(systemData?.health) ||
+    DEFAULT_FALLBACK_BOXES
+  );
+}
+
 /**
  * Build a self-contained SVG (Arial/sans-serif) for the health row.
  * @param {string[]} healthTrack
@@ -137,20 +156,22 @@ export function generateHealthSVG(
     if (mode === "unlinked") symbol = "?";
     if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
     const levelLabel = getLevelLabel(i);
+    const iconPath = ICON_BY_SYMBOL[symbol];
 
     boxes.push(`
       <g>
-        <rect x="${x}" y="0" width="${boxWidth}" height="${boxHeight}"
-          fill="transparent" stroke="#fff" stroke-width="2"/>
-        <text x="${x + boxWidth / 2}" y="${boxHeight / 2}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="${Math.floor(boxHeight * 0.45)}"
-          font-weight="bold"
-          fill="#fff"
-          text-anchor="middle"
-          dominant-baseline="central">${escapeXml(symbol)}</text>
+        <image href="${escapeXml(BOX_ASSET)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>
+        ${iconPath
+          ? `<image href="${escapeXml(iconPath)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>`
+          : `<text x="${x + boxWidth / 2}" y="${boxHeight / 2}"
+              font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
+              font-size="${Math.floor(boxHeight * 0.88)}"
+              font-weight="bold"
+              fill="#fff"
+              text-anchor="middle"
+              dominant-baseline="central">${escapeXml(symbol)}</text>`}
         <text x="${x + boxWidth / 2}" y="${boxHeight + 12}"
-          font-family="Arial, Helvetica, sans-serif"
+          font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
           font-size="11"
           fill="#fff"
           text-anchor="middle"
