@@ -2,7 +2,7 @@
   "id": "wod20-health-monitor",
   "title": "WoD20 Health Monitor",
   "description": "Place tiles that mirror WoD20 actor health tracks (/, X, *) and update when health changes.",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "authors": [
     {
       "name": "WoD20 Health Monitor"

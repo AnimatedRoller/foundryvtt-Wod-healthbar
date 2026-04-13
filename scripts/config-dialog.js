@@ -4,7 +4,7 @@ import {
   MODULE_ID,
 } from "./constants.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
-import { parseHealthTrackFromActor } from "./health-svg.js";
+import { getHealthTextureDimensions, parseHealthTrackFromActor } from "./health-svg.js";
 
 function dialogRoot(html) {
   if (html instanceof HTMLElement) return html;
@@ -65,8 +65,12 @@ export async function openHealthConfigDialog(tileDocument) {
               const trackLen = actor ? parseHealthTrackFromActor(actor).track.length : null;
               const boxes =
                 trackLen && trackLen > 0 ? trackLen : 7;
-              const width = boxes * (next.boxWidth || DEFAULT_BOX_WIDTH);
-              const height = next.boxHeight || DEFAULT_BOX_HEIGHT;
+              const { width, height } = getHealthTextureDimensions(
+                boxes,
+                next.boxWidth || DEFAULT_BOX_WIDTH,
+                next.boxHeight || DEFAULT_BOX_HEIGHT,
+                { mode: actor ? "normal" : "unlinked" }
+              );
 
               await tileDocument.update({
                 width,
@@ -87,8 +91,12 @@ export async function openHealthConfigDialog(tileDocument) {
                 actorId: null,
                 numBoxes: null,
               });
-              const width = 7 * (next.boxWidth || DEFAULT_BOX_WIDTH);
-              const height = next.boxHeight || DEFAULT_BOX_HEIGHT;
+              const { width, height } = getHealthTextureDimensions(
+                7,
+                next.boxWidth || DEFAULT_BOX_WIDTH,
+                next.boxHeight || DEFAULT_BOX_HEIGHT,
+                { mode: "unlinked" }
+              );
               await tileDocument.update({
                 width,
                 height,

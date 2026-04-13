@@ -1,5 +1,9 @@
 import { DEFAULT_FALLBACK_BOXES, MODULE_ID } from "./constants.js";
-import { generateHealthSVG, parseHealthTrackFromActor } from "./health-svg.js";
+import {
+  generateHealthSVG,
+  getHealthTextureDimensions,
+  parseHealthTrackFromActor,
+} from "./health-svg.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
 import { uploadSvgAsWorldTexture } from "./texture-upload.js";
 
@@ -51,6 +55,9 @@ export async function refreshHealthMonitorTile(tileDocument) {
       return;
     }
     const payload = { texture: { src } };
+    const dims = getHealthTextureDimensions(len, boxW, boxH, { mode });
+    payload.width = dims.width;
+    payload.height = dims.height;
     if (raw.numBoxes !== len) {
       payload.flags = {
         [MODULE_ID]: {
@@ -58,8 +65,6 @@ export async function refreshHealthMonitorTile(tileDocument) {
           numBoxes: len,
         },
       };
-      payload.width = len * boxW;
-      payload.height = boxH;
     }
     await tileDocument.update(payload);
     return;
@@ -74,5 +79,10 @@ export async function refreshHealthMonitorTile(tileDocument) {
     ui.notifications?.error(game.i18n.localize("WOD20HM.ErrTextureUpload"));
     return;
   }
-  await tileDocument.update({ texture: { src } });
+  const dims = getHealthTextureDimensions(track.length, boxW, boxH, { mode });
+  await tileDocument.update({
+    texture: { src },
+    width: dims.width,
+    height: dims.height,
+  });
 }

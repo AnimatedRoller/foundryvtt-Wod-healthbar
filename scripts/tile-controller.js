@@ -4,6 +4,7 @@ import {
   DEFAULT_FALLBACK_BOXES,
   MODULE_ID,
 } from "./constants.js";
+import { getHealthTextureDimensions } from "./health-svg.js";
 import { getPlaceholderTextureSrc } from "./texture-upload.js";
 import {
   getMonitorFlags,
@@ -24,8 +25,9 @@ export async function createHealthMonitorTileAt(canvasPoint) {
   const boxW = DEFAULT_BOX_WIDTH;
   const boxH = DEFAULT_BOX_HEIGHT;
   const num = DEFAULT_FALLBACK_BOXES;
-  const width = num * boxW;
-  const height = boxH;
+  const { width, height } = getHealthTextureDimensions(num, boxW, boxH, {
+    mode: "unlinked",
+  });
 
   const snapped = canvas.grid.getSnappedPosition(canvasPoint.x, canvasPoint.y);
   const x = Math.round(snapped.x - width / 2);

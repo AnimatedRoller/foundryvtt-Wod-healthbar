@@ -5,6 +5,19 @@ import {
   MODULE_ID,
 } from "./constants.js";
 
+export const HEALTH_BOX_GAP = 6;
+const LEVEL_LABEL_HEIGHT = 20;
+const FOOTER_LABEL_HEIGHT = 26;
+const DEFAULT_LEVEL_LABELS = [
+  "bruised",
+  "hurt",
+  "injured",
+  "wounded",
+  "mauled",
+  "crippled",
+  "incapacitated",
+];
+
 /**
  * Map WoD20 health track cell values to the symbol shown in each box.
  * Supports both semantic strings and direct symbol strings.
@@ -115,14 +128,15 @@ export function generateHealthSVG(
 ) {
   const mode = options.mode ?? "normal";
   const n = Math.max(1, healthTrack?.length ?? 0);
-  const totalW = boxWidth * n;
+  const totalW = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const boxes = [];
 
   for (let i = 0; i < n; i++) {
-    const x = i * boxWidth;
+    const x = i * (boxWidth + HEALTH_BOX_GAP);
     let symbol = mapStatusToSymbol(healthTrack[i]);
     if (mode === "unlinked") symbol = "?";
     if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
+    const levelLabel = getLevelLabel(i);
 
     boxes.push(`
       <g>
@@ -135,16 +149,22 @@ export function generateHealthSVG(
           fill="#fff"
           text-anchor="middle"
           dominant-baseline="central">${escapeXml(symbol)}</text>
+        <text x="${x + boxWidth / 2}" y="${boxHeight + 12}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="11"
+          fill="#fff"
+          text-anchor="middle"
+          dominant-baseline="central">${escapeXml(levelLabel)}</text>
       </g>`);
   }
 
-  const labelExtra = mode === "unlinked" || mode === "error" ? 26 : 0;
-  const totalH = boxHeight + labelExtra;
+  const labelExtra = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
+  const totalH = boxHeight + LEVEL_LABEL_HEIGHT + labelExtra;
   const label =
     mode === "unlinked"
-      ? `<text x="${totalW / 2}" y="${boxHeight + 16}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#333" text-anchor="middle">No actor linked — right-click or HUD to configure</text>`
+      ? `<text x="${totalW / 2}" y="${boxHeight + LEVEL_LABEL_HEIGHT + 16}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#ddd" text-anchor="middle">No actor linked - right-click or HUD to configure</text>`
       : mode === "error"
-        ? `<text x="${totalW / 2}" y="${boxHeight + 16}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#a00" text-anchor="middle">Linked actor missing</text>`
+        ? `<text x="${totalW / 2}" y="${boxHeight + LEVEL_LABEL_HEIGHT + 16}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#f88" text-anchor="middle">Linked actor missing</text>`
         : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -152,6 +172,24 @@ export function generateHealthSVG(
   ${boxes.join("\n")}
   ${label}
 </svg>`;
+}
+
+export function getHealthTextureDimensions(
+  numBoxes,
+  boxWidth = DEFAULT_BOX_WIDTH,
+  boxHeight = DEFAULT_BOX_HEIGHT,
+  options = {}
+) {
+  const n = Math.max(1, Number(numBoxes) || DEFAULT_FALLBACK_BOXES);
+  const mode = options.mode ?? "normal";
+  const width = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
+  const footer = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
+  const height = boxHeight + LEVEL_LABEL_HEIGHT + footer;
+  return { width, height };
+}
+
+function getLevelLabel(index) {
+  return DEFAULT_LEVEL_LABELS[index] ?? `level ${index + 1}`;
 }
 
 function escapeXml(text) {
