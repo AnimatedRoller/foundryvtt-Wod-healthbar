@@ -4,7 +4,11 @@ import {
   MODULE_ID,
 } from "./constants.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
-import { getHealthTextureDimensions, parseHealthTrackFromActor } from "./health-svg.js";
+import {
+  getHealthSvgLayout,
+  getHealthTextureDimensions,
+  parseHealthTrackFromActor,
+} from "./health-svg.js";
 
 function dialogRoot(html) {
   if (html instanceof HTMLElement) return html;
@@ -67,13 +71,19 @@ export async function openHealthConfigDialog(tileDocument) {
               const parsed = actor ? parseHealthTrackFromActor(actor) : null;
               const trackLen = parsed ? parsed.track.length : null;
               const rows = parsed?.secondaryTrack ? 2 : 1;
+              const layout = actor ? getHealthSvgLayout(actor) : { hideLevelLabels: false, showDicePenalty: false };
               const boxes =
                 trackLen && trackLen > 0 ? trackLen : 7;
               const { width, height } = getHealthTextureDimensions(
                 boxes,
                 next.boxWidth || DEFAULT_BOX_WIDTH,
                 next.boxHeight || DEFAULT_BOX_HEIGHT,
-                { mode: actor ? "normal" : "unlinked", rows }
+                {
+                  mode: actor ? "normal" : "unlinked",
+                  rows,
+                  hideLevelLabels: layout.hideLevelLabels,
+                  showDicePenalty: layout.showDicePenalty,
+                }
               );
 
               await tileDocument.update({

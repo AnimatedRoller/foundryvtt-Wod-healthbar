@@ -2,6 +2,7 @@ import { DEFAULT_FALLBACK_BOXES, MODULE_ID } from "./constants.js";
 import {
   generateHealthSVG,
   getEmbeddedHealthAssetUris,
+  getHealthSvgLayout,
   parseHealthTrackFromActor,
 } from "./health-svg.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
@@ -54,10 +55,15 @@ export async function refreshHealthMonitorTile(tileDocument) {
       if (secondaryTrack.length > len) secondaryTrack = secondaryTrack.slice(0, len);
     }
 
+    const layout = getHealthSvgLayout(actor);
     const svg = generateHealthSVG(track, boxW, boxH, {
       mode,
       assetUris,
       secondaryTrack,
+      hideLevelLabels: layout.hideLevelLabels,
+      showDicePenalty: layout.showDicePenalty,
+      dicePenalty:
+        actor.type === "Wraith" ? (parsed.dicePenalty ?? 0) : undefined,
     });
     let src;
     try {

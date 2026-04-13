@@ -152,6 +152,8 @@ function actorHealthTrackChanged(changes) {
   return Object.keys(flat).some((k) =>
     k.startsWith("system.health.track") ||
     k.startsWith("system.health.damage") ||
+    k.startsWith("system.health.woundpenalty") ||
+    k.startsWith("system.health.woundPenalty") ||
     k.startsWith("system.traits.health.totalhealthlevels") ||
     k.startsWith("system.health.bruised") ||
     k.startsWith("system.health.hurt") ||

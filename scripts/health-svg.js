@@ -8,6 +8,7 @@ import {
 export const HEALTH_BOX_GAP = 12;
 const LEVEL_LABEL_HEIGHT = 20;
 const FOOTER_LABEL_HEIGHT = 26;
+const DICE_PENALTY_BAND_HEIGHT = 24;
 const ROW_GAP = 14;
 const MIN_VISIBLE_BOXES = 7;
 const DEFAULT_LEVEL_LABELS = [
@@ -59,7 +60,11 @@ export function parseHealthTrackFromActor(actor) {
       actorType === "Changeling"
         ? buildTrackFromDamageNode(systemData?.health?.damage?.chimerical, expectedBoxes)
         : null;
-    return { track: parsed, secondaryTrack, valid: true };
+    const base = { track: parsed, secondaryTrack, valid: true };
+    if (actorType === "Wraith") {
+      return { ...base, dicePenalty: readWraithDicePenalty(systemData) };
+    }
+    return base;
   }
 
   if (actorType === "Wraith") {
@@ -67,7 +72,12 @@ export function parseHealthTrackFromActor(actor) {
     const wraithTrack =
       buildTrackFromDamageNode(systemData?.health?.damage?.corpus, wraithBoxes) ??
       Array(wraithBoxes).fill("healthy");
-    return { track: wraithTrack, secondaryTrack: null, valid: true };
+    return {
+      track: wraithTrack,
+      secondaryTrack: null,
+      valid: true,
+      dicePenalty: readWraithDicePenalty(systemData),
+    };
   }
 
   // WoD20 often stores health as damage counts instead of a string track array.
@@ -88,6 +98,48 @@ export function parseHealthTrackFromActor(actor) {
     secondaryTrack: null,
     valid: false,
   };
+}
+
+/**
+ * Wraith corpus wound penalty field name varies by sheet version.
+ */
+function readWraithDicePenalty(systemData) {
+  const corpus = systemData?.health?.damage?.corpus;
+  if (corpus && typeof corpus === "object") {
+    const fromCorpus =
+      corpus.woundpenalty ?? corpus.woundPenalty ?? corpus.dicepenalty ?? corpus.dicePenalty;
+    if (fromCorpus != null && fromCorpus !== "") {
+      const n = Number(fromCorpus);
+      return Number.isFinite(n) ? n : 0;
+    }
+  }
+  const dmg = systemData?.health?.damage;
+  if (dmg && typeof dmg === "object") {
+    const fromDamage = dmg.woundpenalty ?? dmg.woundPenalty;
+    if (fromDamage != null && fromDamage !== "") {
+      const n = Number(fromDamage);
+      return Number.isFinite(n) ? n : 0;
+    }
+  }
+  const h = systemData?.health;
+  if (h && typeof h === "object") {
+    const fromHealth = h.woundpenalty ?? h.woundPenalty;
+    if (fromHealth != null && fromHealth !== "") {
+      const n = Number(fromHealth);
+      return Number.isFinite(n) ? n : 0;
+    }
+  }
+  return 0;
+}
+
+/**
+ * SVG layout flags for actor-linked tiles (tile size must match refresh).
+ */
+export function getHealthSvgLayout(actor) {
+  if (!actor || String(actor.type) !== "Wraith") {
+    return { hideLevelLabels: false, showDicePenalty: false };
+  }
+  return { hideLevelLabels: true, showDicePenalty: true };
 }
 
 function buildTrackFromDamageNode(damageNode, expectedBoxes = DEFAULT_FALLBACK_BOXES) {
@@ -168,11 +220,16 @@ export function generateHealthSVG(
     ? options.secondaryTrack
     : null;
   const rows = secondaryTrack ? 2 : 1;
+  const hideLevelLabels = options.hideLevelLabels === true;
+  const labelUnder = hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
+  const showDicePenalty =
+    mode === "normal" && options.showDicePenalty === true;
+  const rowStride = boxHeight + labelUnder + ROW_GAP;
   const n = Math.max(1, healthTrack?.length ?? 0);
   const totalW = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const boxes = [];
   const buildRow = (track, rowIndex, rowLabel) => {
-    const rowY = rowIndex * (boxHeight + LEVEL_LABEL_HEIGHT + ROW_GAP);
+    const rowY = rowIndex * rowStride;
     const row = [];
     if (rowLabel) {
       row.push(
@@ -190,6 +247,14 @@ export function generateHealthSVG(
       const assets = options.assetUris ?? {};
       const boxHref = assets.box ?? BOX_ASSET;
       const iconHref = iconPath ? assets[symbol] ?? iconPath : null;
+      const levelText = hideLevelLabels
+        ? ""
+        : `<text x="${x + boxWidth / 2}" y="${rowY + boxHeight + 12}"
+          font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
+          font-size="11"
+          fill="#fff"
+          text-anchor="middle"
+          dominant-baseline="central">${escapeXml(levelLabel)}</text>`;
 
       row.push(`
       <g>
@@ -204,12 +269,7 @@ export function generateHealthSVG(
               fill="#fff"
               text-anchor="middle"
               dominant-baseline="central">${escapeXml(symbol)}</text>`}
-        <text x="${x + boxWidth / 2}" y="${rowY + boxHeight + 12}"
-          font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
-          font-size="11"
-          fill="#fff"
-          text-anchor="middle"
-          dominant-baseline="central">${escapeXml(levelLabel)}</text>
+        ${levelText}
       </g>`);
     }
     return row.join("\n");
@@ -218,9 +278,19 @@ export function generateHealthSVG(
   boxes.push(buildRow(healthTrack, 0, secondaryTrack ? "Human" : ""));
   if (secondaryTrack) boxes.push(buildRow(secondaryTrack, 1, "Chimerical"));
 
+  const rowsContentHeight =
+    rows * (boxHeight + labelUnder) + (rows - 1) * ROW_GAP;
+  let totalH = rowsContentHeight;
+  let dicePenaltyLine = "";
+  if (showDicePenalty) {
+    const lineY = rowsContentHeight + 18;
+    dicePenaltyLine = `<text x="${totalW / 2}" y="${lineY}" font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif" font-size="12" fill="#ddd" text-anchor="middle">${escapeXml(
+      formatDicePenaltyLine(options.dicePenalty)
+    )}</text>`;
+    totalH += DICE_PENALTY_BAND_HEIGHT;
+  }
   const labelExtra = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
-  const totalH =
-    rows * (boxHeight + LEVEL_LABEL_HEIGHT) + (rows - 1) * ROW_GAP + labelExtra;
+  totalH += labelExtra;
   const label =
     mode === "unlinked"
       ? `<text x="${totalW / 2}" y="${totalH - 10}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#ddd" text-anchor="middle">No actor linked - right-click or HUD to configure</text>`
@@ -231,6 +301,7 @@ export function generateHealthSVG(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">
   ${boxes.join("\n")}
+  ${dicePenaltyLine}
   ${label}
 </svg>`;
 }
@@ -265,15 +336,28 @@ export function getHealthTextureDimensions(
   const n = Math.max(1, Number(numBoxes) || DEFAULT_FALLBACK_BOXES);
   const mode = options.mode ?? "normal";
   const rows = Math.max(1, Number(options.rows) || 1);
+  const labelUnder = options.hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
+  const diceBand =
+    mode === "normal" && options.showDicePenalty ? DICE_PENALTY_BAND_HEIGHT : 0;
   const width = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const footer = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
   const height =
-    rows * (boxHeight + LEVEL_LABEL_HEIGHT) + (rows - 1) * ROW_GAP + footer;
+    rows * (boxHeight + labelUnder) +
+    (rows - 1) * ROW_GAP +
+    diceBand +
+    footer;
   return { width, height };
 }
 
 function getLevelLabel(index) {
   return DEFAULT_LEVEL_LABELS[index] ?? `level ${index + 1}`;
+}
+
+function formatDicePenaltyLine(value) {
+  if (value === null || value === undefined || value === "") return "Dice penalty: —";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "Dice penalty: —";
+  return `Dice penalty: ${n}`;
 }
 
 function escapeXml(text) {
