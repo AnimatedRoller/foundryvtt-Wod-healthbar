@@ -4,6 +4,7 @@ import {
   getEmbeddedHealthAssetUris,
   getHealthSvgLayout,
   parseHealthTrackFromActor,
+  trimLevelLabelsToTrack,
 } from "./health-svg.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
 import { uploadSvgAsWorldTexture } from "./texture-upload.js";
@@ -62,8 +63,11 @@ export async function refreshHealthMonitorTile(tileDocument) {
       secondaryTrack,
       hideLevelLabels: layout.hideLevelLabels,
       showDicePenalty: layout.showDicePenalty,
-      dicePenalty:
-        actor.type === "Wraith" ? (parsed.dicePenalty ?? 0) : undefined,
+      dicePenalty: parsed.dicePenalty ?? 0,
+      levelLabels: trimLevelLabelsToTrack(parsed.levelLabels, len),
+      secondaryLevelLabels: secondaryTrack
+        ? trimLevelLabelsToTrack(parsed.secondaryLevelLabels, len)
+        : undefined,
     });
     let src;
     try {

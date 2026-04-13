@@ -11,7 +11,8 @@ const FOOTER_LABEL_HEIGHT = 26;
 const DICE_PENALTY_BAND_HEIGHT = 24;
 const ROW_GAP = 14;
 const MIN_VISIBLE_BOXES = 7;
-const DEFAULT_LEVEL_LABELS = [
+/** WoD20 health tier keys in wound-severity order (maps to system.health.<key>). */
+const HEALTH_TIER_KEYS = [
   "bruised",
   "hurt",
   "injured",
@@ -20,6 +21,7 @@ const DEFAULT_LEVEL_LABELS = [
   "crippled",
   "incapacitated",
 ];
+const DEFAULT_LEVEL_LABELS = HEALTH_TIER_KEYS;
 const BOX_ASSET = `/modules/${MODULE_ID}/Box.png`;
 const ICON_BY_SYMBOL = {
   "/": `/modules/${MODULE_ID}/slash.png`,
@@ -60,11 +62,24 @@ export function parseHealthTrackFromActor(actor) {
       actorType === "Changeling"
         ? buildTrackFromDamageNode(systemData?.health?.damage?.chimerical, expectedBoxes)
         : null;
-    const base = { track: parsed, secondaryTrack, valid: true };
-    if (actorType === "Wraith") {
-      return { ...base, dicePenalty: readWraithDicePenalty(systemData) };
-    }
-    return base;
+    const trackLen = parsed.length;
+    const levelLabels = buildLevelLabelsFromHealthMap(
+      systemData?.health,
+      trackLen
+    );
+    return {
+      track: parsed,
+      secondaryTrack,
+      valid: true,
+      dicePenalty: readHealthDicePenalty(systemData),
+      levelLabels,
+      secondaryLevelLabels: resolveChangelingSecondaryLevelLabels(
+        systemData,
+        actorType,
+        trackLen,
+        levelLabels
+      ),
+    };
   }
 
   if (actorType === "Wraith") {
@@ -76,7 +91,9 @@ export function parseHealthTrackFromActor(actor) {
       track: wraithTrack,
       secondaryTrack: null,
       valid: true,
-      dicePenalty: readWraithDicePenalty(systemData),
+      dicePenalty: readHealthDicePenalty(systemData),
+      levelLabels: null,
+      secondaryLevelLabels: null,
     };
   }
 
@@ -87,23 +104,53 @@ export function parseHealthTrackFromActor(actor) {
       actorType === "Changeling"
         ? buildTrackFromDamageNode(systemData?.health?.damage?.chimerical, expectedBoxes)
         : null;
-    return { track: fromDamage, secondaryTrack, valid: true };
+    const trackLen = fromDamage.length;
+    const levelLabels = buildLevelLabelsFromHealthMap(
+      systemData?.health,
+      trackLen
+    );
+    return {
+      track: fromDamage,
+      secondaryTrack,
+      valid: true,
+      dicePenalty: readHealthDicePenalty(systemData),
+      levelLabels,
+      secondaryLevelLabels: resolveChangelingSecondaryLevelLabels(
+        systemData,
+        actorType,
+        trackLen,
+        levelLabels
+      ),
+    };
   }
 
   console.warn(
     `${MODULE_ID} | Actor "${actor?.name ?? actor?.id}" has no usable health track data; using ${DEFAULT_FALLBACK_BOXES} empty boxes.`
   );
+  const fallbackLen = DEFAULT_FALLBACK_BOXES;
+  const levelLabels = buildLevelLabelsFromHealthMap(
+    systemData?.health,
+    fallbackLen
+  );
   return {
-    track: Array(DEFAULT_FALLBACK_BOXES).fill(""),
+    track: Array(fallbackLen).fill(""),
     secondaryTrack: null,
     valid: false,
+    dicePenalty: readHealthDicePenalty(systemData),
+    levelLabels,
+    secondaryLevelLabels: resolveChangelingSecondaryLevelLabels(
+      systemData,
+      actorType,
+      fallbackLen,
+      levelLabels
+    ),
   };
 }
 
 /**
- * Wraith corpus wound penalty field name varies by sheet version.
+ * WoD20 wound / dice penalty (corpus for Wraith, main damage or health for others).
  */
-function readWraithDicePenalty(systemData) {
+function readHealthDicePenalty(systemData) {
   const corpus = systemData?.health?.damage?.corpus;
   if (corpus && typeof corpus === "object") {
     const fromCorpus =
@@ -133,13 +180,94 @@ function readWraithDicePenalty(systemData) {
 }
 
 /**
+ * Boxes per tier from system.health.<tier> (.total / .value), or 1 if the tier
+ * exists as an object without a numeric count. Missing tier → 0.
+ */
+function boxCountForHealthTier(health, tierKey) {
+  const node = health?.[tierKey];
+  if (!node || typeof node !== "object") return 0;
+  if (node.total != null || node.value != null) {
+    return asNonNegativeInt(node.total ?? node.value);
+  }
+  return 1;
+}
+
+function healthHasAnyTierObject(health) {
+  if (!health || typeof health !== "object") return false;
+  return HEALTH_TIER_KEYS.some((k) => health[k] && typeof health[k] === "object");
+}
+
+/**
+ * One label per health box: repeats tier names when that tier has multiple boxes.
+ */
+function buildLevelLabelsFromHealthMap(health, numBoxes) {
+  const n = Math.max(1, Number(numBoxes) || 1);
+  if (!healthHasAnyTierObject(health)) {
+    return staticTierLabels(n);
+  }
+  const labels = [];
+  for (const key of HEALTH_TIER_KEYS) {
+    const count = boxCountForHealthTier(health, key);
+    for (let i = 0; i < count; i++) labels.push(key);
+  }
+  if (labels.length === 0) {
+    return staticTierLabels(n);
+  }
+  while (labels.length < n) {
+    labels.push(`level ${labels.length + 1}`);
+  }
+  return labels.slice(0, n);
+}
+
+function staticTierLabels(numBoxes) {
+  const n = Math.max(1, Number(numBoxes) || 1);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(DEFAULT_LEVEL_LABELS[i] ?? `level ${i + 1}`);
+  }
+  return out;
+}
+
+function resolveChangelingSecondaryLevelLabels(
+  systemData,
+  actorType,
+  trackLen,
+  humanLabels
+) {
+  if (actorType !== "Changeling") return null;
+  const chim = systemData?.health?.chimerical;
+  if (chim && typeof chim === "object" && healthHasAnyTierObject(chim)) {
+    return buildLevelLabelsFromHealthMap(chim, trackLen);
+  }
+  return humanLabels ? [...humanLabels] : staticTierLabels(trackLen);
+}
+
+/**
+ * Match label array length to the tile track after numBoxes trim/pad.
+ */
+export function trimLevelLabelsToTrack(labels, trackLen) {
+  if (!Array.isArray(labels)) return undefined;
+  const n = Math.max(1, Number(trackLen) || 1);
+  const out = [...labels];
+  while (out.length < n) {
+    out.push(`level ${out.length + 1}`);
+  }
+  return out.slice(0, n);
+}
+
+/**
  * SVG layout flags for actor-linked tiles (tile size must match refresh).
+ * Wraith: no per-box level labels; all linked types: dice penalty row.
  */
 export function getHealthSvgLayout(actor) {
-  if (!actor || String(actor.type) !== "Wraith") {
+  if (!actor) {
     return { hideLevelLabels: false, showDicePenalty: false };
   }
-  return { hideLevelLabels: true, showDicePenalty: true };
+  const isWraith = String(actor.type) === "Wraith";
+  return {
+    hideLevelLabels: isWraith,
+    showDicePenalty: true,
+  };
 }
 
 function buildTrackFromDamageNode(damageNode, expectedBoxes = DEFAULT_FALLBACK_BOXES) {
@@ -167,17 +295,8 @@ function buildTrackFromDamageNode(damageNode, expectedBoxes = DEFAULT_FALLBACK_B
 
 function estimateHealthLevelsFromMap(health) {
   if (!health || typeof health !== "object") return 0;
-  const levelKeys = [
-    "bruised",
-    "hurt",
-    "injured",
-    "wounded",
-    "mauled",
-    "crippled",
-    "incapacitated",
-  ];
   let sum = 0;
-  for (const k of levelKeys) {
+  for (const k of HEALTH_TIER_KEYS) {
     const node = health[k];
     if (!node || typeof node !== "object") continue;
     sum += asNonNegativeInt(node.total ?? node.value ?? 0);
@@ -227,8 +346,14 @@ export function generateHealthSVG(
   const rowStride = boxHeight + labelUnder + ROW_GAP;
   const n = Math.max(1, healthTrack?.length ?? 0);
   const totalW = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
+  const primaryLevelLabels = Array.isArray(options.levelLabels)
+    ? options.levelLabels
+    : null;
+  const secondaryLevelLabels = Array.isArray(options.secondaryLevelLabels)
+    ? options.secondaryLevelLabels
+    : primaryLevelLabels;
   const boxes = [];
-  const buildRow = (track, rowIndex, rowLabel) => {
+  const buildRow = (track, rowIndex, rowLabel, labelsForRow) => {
     const rowY = rowIndex * rowStride;
     const row = [];
     if (rowLabel) {
@@ -242,7 +367,7 @@ export function generateHealthSVG(
       let symbol = mapStatusToSymbol(track[i]);
       if (mode === "unlinked") symbol = "?";
       if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
-      const levelLabel = getLevelLabel(i);
+      const levelLabel = resolveBoxLevelLabel(labelsForRow, i);
       const iconPath = ICON_BY_SYMBOL[symbol];
       const assets = options.assetUris ?? {};
       const boxHref = assets.box ?? BOX_ASSET;
@@ -275,8 +400,19 @@ export function generateHealthSVG(
     return row.join("\n");
   };
 
-  boxes.push(buildRow(healthTrack, 0, secondaryTrack ? "Human" : ""));
-  if (secondaryTrack) boxes.push(buildRow(secondaryTrack, 1, "Chimerical"));
+  boxes.push(
+    buildRow(
+      healthTrack,
+      0,
+      secondaryTrack ? "Human" : "",
+      primaryLevelLabels
+    )
+  );
+  if (secondaryTrack) {
+    boxes.push(
+      buildRow(secondaryTrack, 1, "Chimerical", secondaryLevelLabels)
+    );
+  }
 
   const rowsContentHeight =
     rows * (boxHeight + labelUnder) + (rows - 1) * ROW_GAP;
@@ -349,7 +485,10 @@ export function getHealthTextureDimensions(
   return { width, height };
 }
 
-function getLevelLabel(index) {
+function resolveBoxLevelLabel(labelsForRow, index) {
+  if (Array.isArray(labelsForRow) && labelsForRow[index] != null) {
+    return String(labelsForRow[index]);
+  }
   return DEFAULT_LEVEL_LABELS[index] ?? `level ${index + 1}`;
 }
 
