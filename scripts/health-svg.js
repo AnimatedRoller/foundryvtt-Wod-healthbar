@@ -17,11 +17,11 @@ const DEFAULT_LEVEL_LABELS = [
   "crippled",
   "incapacitated",
 ];
-const BOX_ASSET = `modules/${MODULE_ID}/Box.png`;
+const BOX_ASSET = `/modules/${MODULE_ID}/Box.png`;
 const ICON_BY_SYMBOL = {
-  "/": `modules/${MODULE_ID}/slash.png`,
-  X: `modules/${MODULE_ID}/Cross.png`,
-  "*": `modules/${MODULE_ID}/Star.png`,
+  "/": `/modules/${MODULE_ID}/slash.png`,
+  X: `/modules/${MODULE_ID}/Cross.png`,
+  "*": `/modules/${MODULE_ID}/Star.png`,
 };
 
 /**
