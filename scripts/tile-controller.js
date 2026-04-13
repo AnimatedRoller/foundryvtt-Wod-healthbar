@@ -142,23 +142,6 @@ export function registerSceneControls() {
   });
 }
 
-function iterHealthTilesInScene(scene) {
-  if (!scene?.tiles) return [];
-  return scene.tiles.filter((t) => isHealthMonitorTile(t));
-}
-
-export async function refreshAllHealthTilesInActiveScene() {
-  if (!canvas?.ready || !canvas.scene) return;
-  const docs = iterHealthTilesInScene(canvas.scene);
-  for (const d of docs) {
-    try {
-      await refreshHealthMonitorTile(d);
-    } catch (e) {
-      console.error(`${MODULE_ID} | Failed to refresh tile ${d.id}`, e);
-    }
-  }
-}
-
 function actorHealthTrackChanged(changes) {
   return foundry.utils.hasProperty(changes, "system.health.track");
 }
@@ -200,9 +183,9 @@ export function registerActorAndTileHooks() {
     );
   });
 
-  Hooks.on("canvasReady", () => {
-    refreshAllHealthTilesInActiveScene();
-  });
+  // Intentionally no canvasReady bulk refresh: it re-uploaded every health tile on
+  // every scene load (FilePicker + DB update each), which stalled the canvas on Forge.
+  // Textures persist on the TileDocument; refresh runs on place, flag change, and hooks below.
 }
 
 export function registerTileUiHooks() {
