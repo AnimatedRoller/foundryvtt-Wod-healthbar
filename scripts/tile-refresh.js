@@ -2,7 +2,6 @@ import { DEFAULT_FALLBACK_BOXES, MODULE_ID } from "./constants.js";
 import {
   generateHealthSVG,
   getEmbeddedHealthAssetUris,
-  getHealthTextureDimensions,
   parseHealthTrackFromActor,
 } from "./health-svg.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
@@ -43,9 +42,23 @@ export async function refreshHealthMonitorTile(tileDocument) {
     track = Array(DEFAULT_FALLBACK_BOXES).fill("");
   } else {
     const parsed = parseHealthTrackFromActor(actor);
-    track = parsed.track;
-    const len = track.length;
-    const svg = generateHealthSVG(track, boxW, boxH, { mode, assetUris });
+    const len = raw.numBoxes ?? parsed.track.length;
+    track = [...parsed.track];
+    while (track.length < len) track.push("healthy");
+    if (track.length > len) track = track.slice(0, len);
+    let secondaryTrack = Array.isArray(parsed.secondaryTrack)
+      ? [...parsed.secondaryTrack]
+      : null;
+    if (secondaryTrack) {
+      while (secondaryTrack.length < len) secondaryTrack.push("healthy");
+      if (secondaryTrack.length > len) secondaryTrack = secondaryTrack.slice(0, len);
+    }
+
+    const svg = generateHealthSVG(track, boxW, boxH, {
+      mode,
+      assetUris,
+      secondaryTrack,
+    });
     let src;
     try {
       src = await uploadSvgAsWorldTexture(svg, tileDocument.id, Date.now());
@@ -57,10 +70,7 @@ export async function refreshHealthMonitorTile(tileDocument) {
       return;
     }
     const payload = { texture: { src } };
-    const dims = getHealthTextureDimensions(len, boxW, boxH, { mode });
-    payload.width = dims.width;
-    payload.height = dims.height;
-    if (raw.numBoxes !== len) {
+    if (raw.numBoxes == null) {
       payload.flags = {
         [MODULE_ID]: {
           ...raw,
@@ -72,6 +82,9 @@ export async function refreshHealthMonitorTile(tileDocument) {
     return;
   }
 
+  const len = raw.numBoxes ?? track.length;
+  while (track.length < len) track.push("healthy");
+  if (track.length > len) track = track.slice(0, len);
   const svg = generateHealthSVG(track, boxW, boxH, { mode, assetUris });
   let src;
   try {
@@ -81,10 +94,5 @@ export async function refreshHealthMonitorTile(tileDocument) {
     ui.notifications?.error(game.i18n.localize("WOD20HM.ErrTextureUpload"));
     return;
   }
-  const dims = getHealthTextureDimensions(track.length, boxW, boxH, { mode });
-  await tileDocument.update({
-    texture: { src },
-    width: dims.width,
-    height: dims.height,
-  });
+  await tileDocument.update({ texture: { src } });
 }

@@ -51,7 +51,7 @@ export async function createHealthMonitorTileAt(canvasPoint) {
           actorId: null,
           boxWidth: boxW,
           boxHeight: boxH,
-          numBoxes: null,
+          numBoxes: num,
         },
       },
     },

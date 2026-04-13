@@ -64,21 +64,23 @@ export async function openHealthConfigDialog(tileDocument) {
               });
 
               const actor = id ? game.actors.get(id) : null;
-              const trackLen = actor ? parseHealthTrackFromActor(actor).track.length : null;
+              const parsed = actor ? parseHealthTrackFromActor(actor) : null;
+              const trackLen = parsed ? parsed.track.length : null;
+              const rows = parsed?.secondaryTrack ? 2 : 1;
               const boxes =
                 trackLen && trackLen > 0 ? trackLen : 7;
               const { width, height } = getHealthTextureDimensions(
                 boxes,
                 next.boxWidth || DEFAULT_BOX_WIDTH,
                 next.boxHeight || DEFAULT_BOX_HEIGHT,
-                { mode: actor ? "normal" : "unlinked" }
+                { mode: actor ? "normal" : "unlinked", rows }
               );
 
               await tileDocument.update({
                 width,
                 height,
                 flags: {
-                  [MODULE_ID]: next,
+                  [MODULE_ID]: { ...next, numBoxes: boxes },
                 },
               });
               resolve(true);
@@ -102,7 +104,7 @@ export async function openHealthConfigDialog(tileDocument) {
               await tileDocument.update({
                 width,
                 height,
-                flags: { [MODULE_ID]: next },
+                flags: { [MODULE_ID]: { ...next, numBoxes: 7 } },
               });
               resolve(true);
             },

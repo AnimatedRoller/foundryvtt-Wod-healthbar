@@ -8,6 +8,8 @@ import {
 export const HEALTH_BOX_GAP = 12;
 const LEVEL_LABEL_HEIGHT = 20;
 const FOOTER_LABEL_HEIGHT = 26;
+const ROW_GAP = 14;
+const MIN_VISIBLE_BOXES = 7;
 const DEFAULT_LEVEL_LABELS = [
   "bruised",
   "hurt",
@@ -46,18 +48,36 @@ export function mapStatusToSymbol(status) {
  * Returns { track, valid } where valid is false if the structure was unexpected.
  */
 export function parseHealthTrackFromActor(actor) {
+  const actorType = String(actor?.type ?? "");
+  const systemData = actor?.system;
   const raw = actor?.system?.health?.track;
-  const expectedBoxes = getExpectedHealthBoxCount(actor?.system);
+  const expectedBoxes = getExpectedHealthBoxCount(systemData, actorType);
   if (Array.isArray(raw)) {
     const parsed = raw.map((v) => String(v));
     while (parsed.length < expectedBoxes) parsed.push("healthy");
-    return { track: parsed, valid: true };
+    const secondaryTrack =
+      actorType === "Changeling"
+        ? buildTrackFromDamageNode(systemData?.health?.damage?.chimerical, expectedBoxes)
+        : null;
+    return { track: parsed, secondaryTrack, valid: true };
+  }
+
+  if (actorType === "Wraith") {
+    const wraithBoxes = Math.max(10, expectedBoxes);
+    const wraithTrack =
+      buildTrackFromDamageNode(systemData?.health?.damage?.corpus, wraithBoxes) ??
+      Array(wraithBoxes).fill("healthy");
+    return { track: wraithTrack, secondaryTrack: null, valid: true };
   }
 
   // WoD20 often stores health as damage counts instead of a string track array.
-  const fromDamage = buildTrackFromDamage(actor?.system, expectedBoxes);
+  const fromDamage = buildTrackFromDamageNode(systemData?.health?.damage, expectedBoxes);
   if (fromDamage) {
-    return { track: fromDamage, valid: true };
+    const secondaryTrack =
+      actorType === "Changeling"
+        ? buildTrackFromDamageNode(systemData?.health?.damage?.chimerical, expectedBoxes)
+        : null;
+    return { track: fromDamage, secondaryTrack, valid: true };
   }
 
   console.warn(
@@ -65,25 +85,20 @@ export function parseHealthTrackFromActor(actor) {
   );
   return {
     track: Array(DEFAULT_FALLBACK_BOXES).fill(""),
+    secondaryTrack: null,
     valid: false,
   };
 }
 
-function buildTrackFromDamage(systemData, expectedBoxes = DEFAULT_FALLBACK_BOXES) {
-  const damage = systemData?.health?.damage;
-  if (!damage || typeof damage !== "object") return null;
+function buildTrackFromDamageNode(damageNode, expectedBoxes = DEFAULT_FALLBACK_BOXES) {
+  if (!damageNode || typeof damageNode !== "object") return null;
 
-  const bashing = asNonNegativeInt(damage.bashing);
-  const lethal = asNonNegativeInt(damage.lethal);
-  const aggravated = asNonNegativeInt(damage.aggravated);
+  const bashing = asNonNegativeInt(damageNode.bashing);
+  const lethal = asNonNegativeInt(damageNode.lethal);
+  const aggravated = asNonNegativeInt(damageNode.aggravated);
   const totalDamage = bashing + lethal + aggravated;
 
-  const totalHealthLevels = Math.max(
-    expectedBoxes,
-    asNonNegativeInt(systemData?.traits?.health?.totalhealthlevels?.value) ||
-      estimateHealthLevelsFromMap(systemData?.health) ||
-      DEFAULT_FALLBACK_BOXES
-  );
+  const totalHealthLevels = Math.max(MIN_VISIBLE_BOXES, expectedBoxes);
 
   if (!totalDamage && !totalHealthLevels) return null;
 
@@ -124,12 +139,14 @@ function asNonNegativeInt(value) {
   return Math.floor(n);
 }
 
-function getExpectedHealthBoxCount(systemData) {
-  return (
+function getExpectedHealthBoxCount(systemData, actorType = "") {
+  const base = (
     asNonNegativeInt(systemData?.traits?.health?.totalhealthlevels?.value) ||
     estimateHealthLevelsFromMap(systemData?.health) ||
     DEFAULT_FALLBACK_BOXES
   );
+  if (actorType === "Wraith") return Math.max(10, base, MIN_VISIBLE_BOXES);
+  return Math.max(MIN_VISIBLE_BOXES, base);
 }
 
 /**
@@ -147,50 +164,68 @@ export function generateHealthSVG(
   options = {}
 ) {
   const mode = options.mode ?? "normal";
+  const secondaryTrack = Array.isArray(options.secondaryTrack)
+    ? options.secondaryTrack
+    : null;
+  const rows = secondaryTrack ? 2 : 1;
   const n = Math.max(1, healthTrack?.length ?? 0);
   const totalW = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const boxes = [];
+  const buildRow = (track, rowIndex, rowLabel) => {
+    const rowY = rowIndex * (boxHeight + LEVEL_LABEL_HEIGHT + ROW_GAP);
+    const row = [];
+    if (rowLabel) {
+      row.push(
+        `<text x="0" y="${rowY - 4}" font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif" font-size="11" fill="#ddd" text-anchor="start">${escapeXml(rowLabel)}</text>`
+      );
+    }
 
-  for (let i = 0; i < n; i++) {
-    const x = i * (boxWidth + HEALTH_BOX_GAP);
-    let symbol = mapStatusToSymbol(healthTrack[i]);
-    if (mode === "unlinked") symbol = "?";
-    if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
-    const levelLabel = getLevelLabel(i);
-    const iconPath = ICON_BY_SYMBOL[symbol];
-    const assets = options.assetUris ?? {};
-    const boxHref = assets.box ?? BOX_ASSET;
-    const iconHref = iconPath ? assets[symbol] ?? iconPath : null;
+    for (let i = 0; i < n; i++) {
+      const x = i * (boxWidth + HEALTH_BOX_GAP);
+      let symbol = mapStatusToSymbol(track[i]);
+      if (mode === "unlinked") symbol = "?";
+      if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
+      const levelLabel = getLevelLabel(i);
+      const iconPath = ICON_BY_SYMBOL[symbol];
+      const assets = options.assetUris ?? {};
+      const boxHref = assets.box ?? BOX_ASSET;
+      const iconHref = iconPath ? assets[symbol] ?? iconPath : null;
 
-    boxes.push(`
+      row.push(`
       <g>
-        <rect x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" fill="transparent" stroke="#fff" stroke-width="2"/>
-        <image href="${escapeXml(boxHref)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>
+        <rect x="${x}" y="${rowY}" width="${boxWidth}" height="${boxHeight}" fill="transparent" stroke="#fff" stroke-width="2"/>
+        <image href="${escapeXml(boxHref)}" x="${x}" y="${rowY}" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>
         ${iconHref
-          ? `<image href="${escapeXml(iconHref)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>`
-          : `<text x="${x + boxWidth / 2}" y="${boxHeight / 2}"
+          ? `<image href="${escapeXml(iconHref)}" x="${x}" y="${rowY}" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>`
+          : `<text x="${x + boxWidth / 2}" y="${rowY + boxHeight / 2}"
               font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
               font-size="${Math.floor(boxHeight * 0.88)}"
               font-weight="bold"
               fill="#fff"
               text-anchor="middle"
               dominant-baseline="central">${escapeXml(symbol)}</text>`}
-        <text x="${x + boxWidth / 2}" y="${boxHeight + 12}"
+        <text x="${x + boxWidth / 2}" y="${rowY + boxHeight + 12}"
           font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
           font-size="11"
           fill="#fff"
           text-anchor="middle"
           dominant-baseline="central">${escapeXml(levelLabel)}</text>
       </g>`);
-  }
+    }
+    return row.join("\n");
+  };
+
+  boxes.push(buildRow(healthTrack, 0, secondaryTrack ? "Human" : ""));
+  if (secondaryTrack) boxes.push(buildRow(secondaryTrack, 1, "Chimerical"));
 
   const labelExtra = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
-  const totalH = boxHeight + LEVEL_LABEL_HEIGHT + labelExtra;
+  const totalH =
+    rows * (boxHeight + LEVEL_LABEL_HEIGHT) + (rows - 1) * ROW_GAP + labelExtra;
   const label =
     mode === "unlinked"
-      ? `<text x="${totalW / 2}" y="${boxHeight + LEVEL_LABEL_HEIGHT + 16}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#ddd" text-anchor="middle">No actor linked - right-click or HUD to configure</text>`
+      ? `<text x="${totalW / 2}" y="${totalH - 10}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#ddd" text-anchor="middle">No actor linked - right-click or HUD to configure</text>`
       : mode === "error"
-        ? `<text x="${totalW / 2}" y="${boxHeight + LEVEL_LABEL_HEIGHT + 16}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#f88" text-anchor="middle">Linked actor missing</text>`
+        ? `<text x="${totalW / 2}" y="${totalH - 10}" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#f88" text-anchor="middle">Linked actor missing</text>`
         : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -229,9 +264,11 @@ export function getHealthTextureDimensions(
 ) {
   const n = Math.max(1, Number(numBoxes) || DEFAULT_FALLBACK_BOXES);
   const mode = options.mode ?? "normal";
+  const rows = Math.max(1, Number(options.rows) || 1);
   const width = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const footer = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
-  const height = boxHeight + LEVEL_LABEL_HEIGHT + footer;
+  const height =
+    rows * (boxHeight + LEVEL_LABEL_HEIGHT) + (rows - 1) * ROW_GAP + footer;
   return { width, height };
 }
 
@@ -264,4 +301,3 @@ function blobToDataUrl(blob) {
     reader.readAsDataURL(blob);
   });
 }
-
