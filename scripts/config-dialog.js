@@ -11,10 +11,12 @@ function dialogRoot(html) {
   return html;
 }
 
+/**
+ * WoD20 (and many other systems) do not use D&D-style types "character" / "npc".
+ * List every actor in the world so GMs can link any sheet (Vampire, Mortal, Creature, etc.).
+ */
 function actorChoices() {
-  return game.actors
-    .filter((a) => a.type === "character" || a.type === "npc")
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return game.actors.filter((a) => a.name?.trim()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
