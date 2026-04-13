@@ -1,0 +1,310 @@
+Module Specification: WoD20 Health Monitor Tile
+
+This specification describes a Foundry VTT v13 module for the World of Darkness 20th Anniversary Edition system (https://github.com/JohanFalt/Foundry_WoD20).
+The module adds a spawnable tile that displays an actor’s health track exactly as shown on the character sheet (boxes with symbols: empty, /, X, *). The tile updates in real time when the actor’s health changes.
+1. Module Information
+
+    Module Name: wod20-health-monitor
+
+    Title: WoD20 Health Monitor
+
+    Version: 1.0.0
+
+    Minimum Foundry Version: 13
+
+    Compatible Systems: WoD20 (system ID: WoD20 as defined by the system)
+
+    File Size: < 10 MB (all code, no large assets)
+
+    Repository: GitHub (public)
+
+    Manifest URL: https://raw.githubusercontent.com/<your-github>/wod20-health-monitor/main/module.json
+
+    Download URL: https://github.com/<your-github>/wod20-health-monitor/archive/main.zip
+
+2. Functional Requirements
+2.1. Spawning a Health Tile
+
+    The module adds a new control button to the Tile Layer (TilesControls) named “Place Health Monitor”.
+
+    Clicking the button switches to placement mode (similar to placing a regular tile).
+
+    On canvas click, a TileDocument is created at the clicked position with:
+
+        Default size: (number_of_boxes * 50) x 60 pixels (50px width per box, 60px height).
+
+        Default texture: a dynamically generated SVG showing the health track of no actor (all empty boxes, or placeholder text).
+
+    After placement, a configuration dialog automatically opens (see 2.3).
+
+2.2. Display & Update Logic
+
+    The tile shows a horizontal row of boxes, one per health level.
+
+    Each box contains a symbol:
+
+        Empty (healthy) → no symbol, empty box
+
+        Bashing damage → /
+
+        Lethal damage → X
+
+        Aggravated damage → *
+
+    Box background: white or light grey, with a black border.
+
+    Symbol color: black or system-themed (optional).
+
+    The tile updates automatically whenever the linked actor’s health track changes.
+
+    Update is triggered by listening to updateActor hooks and comparing the actor’s system.health.track path.
+
+2.3. Linking to an Actor
+
+    Right-clicking a placed health tile shows a context menu option: “Link Actor” (or “Configure”).
+
+    Selecting it opens a dialog with:
+
+        A dropdown list of all actors in the world (filtered by type = character or optionally npc).
+
+        An “Unlink” button.
+
+        “Save” button.
+
+    After linking, the tile immediately displays the actor’s current health track.
+
+    If the linked actor is deleted, the tile shows an error icon or empty track, and a warning is logged to console.
+
+2.4. Tile Flags
+
+    Each tile stores in its flags:
+    json
+
+    {
+      "wod20-health-monitor": {
+        "actorId": "<actor uuid or id>",
+        "boxWidth": 50,
+        "boxHeight": 60,
+        "numBoxes": null   // if null, dynamically read from actor's track length
+      }
+    }
+
+2.5. Resizing & Styling
+
+    Users can manually resize the tile using Foundry’s default tile controls – the SVG will scale accordingly (CSS object-fit: contain recommended).
+
+    The tile’s texture is regenerated as an SVG of the same logical dimensions (numBoxes * boxWidth × boxHeight) and then scaled to the tile’s actual size. This keeps symbols crisp.
+
+3. Technical Implementation
+3.1. Expected Data Model (WoD20 System)
+
+The module assumes the following structure on the actor (based on JohanFalt/Foundry_WoD20):
+javascript
+
+actor.system.health.track = [
+  "healthy",    // → empty
+  "bashing",    // → "/"
+  "lethal",     // → "X"
+  "aggravated"  // → "*"
+]
+
+Or alternatively an array of strings ["", "/", "X", "*"].
+The module will handle both by mapping:
+Stored value	Display symbol
+"healthy" / ""	(empty)
+"bashing" / "/"	/
+"lethal" / "X"	X
+"aggravated" / "*"	*
+
+If the array length differs from the saved numBoxes flag, the tile updates its box count to match the actor’s track.
+3.2. SVG Generation Function
+javascript
+
+function generateHealthSVG(healthTrack, boxWidth = 50, boxHeight = 60) {
+  const boxes = healthTrack.map(status => {
+    const symbol = mapStatusToSymbol(status);
+    return `<rect .../><text ...>${symbol}</text>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${boxWidth * healthTrack.length}" height="${boxHeight}"> ... </svg>`;
+}
+
+    SVG must be self‑contained (no external fonts – use standard sans-serif).
+
+    Return as a data URL: data:image/svg+xml;utf8,<encoded-svg>.
+
+3.3. Updating Tile Texture
+javascript
+
+async function updateTileTexture(tile, actor) {
+  const track = actor.system.health.track;
+  const svg = generateHealthSVG(track, tile.flags["wod20-health-monitor"].boxWidth, tile.flags["wod20-health-monitor"].boxHeight);
+  const dataUrl = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+  await tile.update({ texture: { src: dataUrl } });
+}
+
+3.4. Hook Registration
+javascript
+
+Hooks.on("updateActor", (actor, changes, options, userId) => {
+  if (!changes.system?.health?.track) return;
+  // Find all tiles that reference this actor and refresh them
+  const tiles = canvas.tiles.placeables.filter(t => t.document.flags["wod20-health-monitor"]?.actorId === actor.id);
+  tiles.forEach(tile => updateTileTexture(tile.document, actor));
+});
+
+3.5. Tile Placement Hook
+
+    Override TileConfig or add custom onDrop to intercept tile creation and open config dialog.
+
+Simpler: Use a macro or sidebar button that calls canvas.tiles.create and then opens config.
+But the spec requires a “button in the tile layer” – implement via TileControls.getLayerControls() injection.
+4. Module Structure
+text
+
+wod20-health-monitor/
+├── module.json
+├── scripts/
+│   ├── main.js
+│   ├── health-svg.js
+│   ├── tile-controller.js
+│   └── config-dialog.js
+├── styles/
+│   └── health-monitor.css       (optional, for any custom styling)
+├── templates/
+│   └── health-config.html
+└── languages/
+    └── en.json                  (optional, for localisation)
+
+4.1. module.json
+json
+
+{
+  "id": "wod20-health-monitor",
+  "title": "WoD20 Health Monitor",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "WoD20",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "esmodules": ["scripts/main.js"],
+  "styles": ["styles/health-monitor.css"],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "languages/en.json"
+    }
+  ],
+  "url": "https://github.com/<your-github>/wod20-health-monitor",
+  "manifest": "https://raw.githubusercontent.com/<your-github>/wod20-health-monitor/main/module.json",
+  "download": "https://github.com/<your-github>/wod20-health-monitor/archive/main.zip"
+}
+
+4.2. Main Entry Point (scripts/main.js)
+
+    Register init and ready hooks.
+
+    Inject tile layer button.
+
+    Register settings (if needed, e.g., default box size).
+
+    Set up hook listeners.
+
+5. User Workflow
+
+    Install the module via Manifest URL.
+
+    Activate the module in the world.
+
+    Open the Tile Layer (top bar).
+
+    Click the new “Place Health Monitor” button.
+
+    Click on canvas → tile appears + config dialog opens.
+
+    Select an actor from the dropdown → tile displays health track.
+
+    Whenever the actor takes damage/heals on their sheet, the tile updates instantly.
+
+    Right‑click the tile → “Configure” to change linked actor or unlink.
+
+6. Constraints & Edge Cases
+
+    No actor linked → show empty boxes with question marks or “No Actor”.
+
+    Actor’s health track is malformed → fallback to 7 empty boxes + console warning.
+
+    Multiple tiles linked to same actor → all update correctly.
+
+    Tile deleted → no further updates.
+
+    Performance: SVG regeneration is cheap; avoid flooding with rapid updates (Foundry batches hooks).
+
+    Foundry v13 compatibility: Use TileDocument API, canvas.tiles.placeables, Hooks.on as usual. No deprecated APIs.
+
+7. Testing & Validation
+
+    Test with a fresh Foundry v13 + WoD20 system.
+
+    Create a character, modify health track via sheet.
+
+    Verify tile symbols match exactly (/, X, *).
+
+    Verify tile updates when health changes (via sheet, macro, or API).
+
+    Verify linking/unlinking works.
+
+    Verify tile respects manual resizing.
+
+    Confirm no errors in console.
+
+8. Deliverable for Cursor
+
+Cursor must produce a complete, ready‑to‑install module following this spec. The code should:
+
+    Be self‑contained (no external dependencies except Foundry API).
+
+    Include all files listed in section 4.
+
+    Use async/await and proper error handling.
+
+    Have comments explaining key functions.
+
+    Output the module as a zip archive or provide a GitHub repository structure.
+
+Additional implementation hints for Cursor:
+
+    Use game.actors.getName() or game.actors for dropdown.
+
+    Use TileConfig override? Instead, create a custom dialog that calls tile.update({flags:...}).
+
+    To inject the button: TileLayer.prototype._getControlButtons extension or use libWrapper if needed – but prefer Foundry’s getLayerControls hook. A simple way: add a button via Hooks.on("getSceneControlButtons", (controls) => { ... }) for tiles layer.
+
+    For the SVG, use <rect> for box, <text> centered. Use font-family="Arial, sans-serif", text-anchor="middle", dominant-baseline="central".
+
+9. Example Manifest Link for Installation
+
+After hosting on GitHub, users will install via:
+text
+
+https://raw.githubusercontent.com/<your-github-username>/wod20-health-monitor/main/module.json
+
+(Replace <your-github-username> with actual username.)
+10. Final Notes
+
+    The module must be under 10MB – code is negligible, no large images.
+
+    Provide clear error messages in the UI (e.g., “No actor linked – right‑click to configure”).
+
+    Ensure the module does not break if the WoD20 system is not present (graceful fail).
+
+End of Specification

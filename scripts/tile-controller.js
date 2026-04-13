@@ -143,7 +143,11 @@ export function registerSceneControls() {
 }
 
 function actorHealthTrackChanged(changes) {
-  return foundry.utils.hasProperty(changes, "system.health.track");
+  return (
+    foundry.utils.hasProperty(changes, "system.health.track") ||
+    foundry.utils.hasProperty(changes, "system.health.damage") ||
+    foundry.utils.hasProperty(changes, "system.traits.health.totalhealthlevels")
+  );
 }
 
 export function registerActorAndTileHooks() {

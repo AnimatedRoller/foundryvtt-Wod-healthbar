@@ -27,16 +27,76 @@ export function mapStatusToSymbol(status) {
  */
 export function parseHealthTrackFromActor(actor) {
   const raw = actor?.system?.health?.track;
-  if (!Array.isArray(raw)) {
-    console.warn(
-      `${MODULE_ID} | Actor "${actor?.name ?? actor?.id}" has no usable system.health.track array; using ${DEFAULT_FALLBACK_BOXES} empty boxes.`
-    );
-    return {
-      track: Array(DEFAULT_FALLBACK_BOXES).fill(""),
-      valid: false,
-    };
+  if (Array.isArray(raw)) {
+    return { track: raw.map((v) => String(v)), valid: true };
   }
-  return { track: raw.map((v) => String(v)), valid: true };
+
+  // WoD20 often stores health as damage counts instead of a string track array.
+  const fromDamage = buildTrackFromDamage(actor?.system);
+  if (fromDamage) {
+    return { track: fromDamage, valid: true };
+  }
+
+  console.warn(
+    `${MODULE_ID} | Actor "${actor?.name ?? actor?.id}" has no usable health track data; using ${DEFAULT_FALLBACK_BOXES} empty boxes.`
+  );
+  return {
+    track: Array(DEFAULT_FALLBACK_BOXES).fill(""),
+    valid: false,
+  };
+}
+
+function buildTrackFromDamage(systemData) {
+  const damage = systemData?.health?.damage;
+  if (!damage || typeof damage !== "object") return null;
+
+  const bashing = asNonNegativeInt(damage.bashing);
+  const lethal = asNonNegativeInt(damage.lethal);
+  const aggravated = asNonNegativeInt(damage.aggravated);
+  const totalDamage = bashing + lethal + aggravated;
+
+  const totalHealthLevels =
+    asNonNegativeInt(systemData?.traits?.health?.totalhealthlevels?.value) ||
+    estimateHealthLevelsFromMap(systemData?.health) ||
+    DEFAULT_FALLBACK_BOXES;
+
+  if (!totalDamage && !totalHealthLevels) return null;
+
+  const track = Array(Math.max(totalHealthLevels, totalDamage)).fill("healthy");
+  let i = 0;
+
+  // Worst damage should overwrite first, then lethal, then bashing.
+  for (let n = 0; n < aggravated && i < track.length; n++, i++) track[i] = "aggravated";
+  for (let n = 0; n < lethal && i < track.length; n++, i++) track[i] = "lethal";
+  for (let n = 0; n < bashing && i < track.length; n++, i++) track[i] = "bashing";
+
+  return track;
+}
+
+function estimateHealthLevelsFromMap(health) {
+  if (!health || typeof health !== "object") return 0;
+  const levelKeys = [
+    "bruised",
+    "hurt",
+    "injured",
+    "wounded",
+    "mauled",
+    "crippled",
+    "incapacitated",
+  ];
+  let sum = 0;
+  for (const k of levelKeys) {
+    const node = health[k];
+    if (!node || typeof node !== "object") continue;
+    sum += asNonNegativeInt(node.total ?? node.value ?? 0);
+  }
+  return sum;
+}
+
+function asNonNegativeInt(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n);
 }
 
 /**
