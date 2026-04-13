@@ -1,10 +1,7 @@
 import { DEFAULT_FALLBACK_BOXES, MODULE_ID } from "./constants.js";
-import {
-  generateHealthSVG,
-  parseHealthTrackFromActor,
-  svgToDataUrl,
-} from "./health-svg.js";
+import { generateHealthSVG, parseHealthTrackFromActor } from "./health-svg.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
+import { uploadSvgAsWorldTexture } from "./texture-upload.js";
 
 function resolveActor(actorId) {
   if (!actorId) return null;
@@ -18,6 +15,9 @@ function resolveActor(actorId) {
  */
 export async function refreshHealthMonitorTile(tileDocument) {
   if (!tileDocument || !canvas?.ready) return;
+  // Only GM uploads; other clients receive the TileDocument update over the socket.
+  if (!game.user?.isGM) return;
+
   const raw = mergeDefaultFlags(getMonitorFlags(tileDocument));
   const actor = resolveActor(raw.actorId);
   const boxW = raw.boxWidth;
@@ -40,7 +40,16 @@ export async function refreshHealthMonitorTile(tileDocument) {
     track = parsed.track;
     const len = track.length;
     const svg = generateHealthSVG(track, boxW, boxH, { mode });
-    const src = svgToDataUrl(svg);
+    let src;
+    try {
+      src = await uploadSvgAsWorldTexture(svg, tileDocument.id);
+    } catch (e) {
+      console.error(`${MODULE_ID} | SVG upload failed`, e);
+      ui.notifications?.error(
+        game.i18n.localize("WOD20HM.ErrTextureUpload")
+      );
+      return;
+    }
     const payload = { texture: { src } };
     if (raw.numBoxes !== len) {
       payload.flags = {
@@ -55,6 +64,13 @@ export async function refreshHealthMonitorTile(tileDocument) {
   }
 
   const svg = generateHealthSVG(track, boxW, boxH, { mode });
-  const src = svgToDataUrl(svg);
+  let src;
+  try {
+    src = await uploadSvgAsWorldTexture(svg, tileDocument.id);
+  } catch (e) {
+    console.error(`${MODULE_ID} | SVG upload failed`, e);
+    ui.notifications?.error(game.i18n.localize("WOD20HM.ErrTextureUpload"));
+    return;
+  }
   await tileDocument.update({ texture: { src } });
 }

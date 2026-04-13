@@ -102,7 +102,3 @@ function escapeXml(text) {
     .replace(/"/g, "&quot;");
 }
 
-/** Encode SVG as a texture src data URL (per spec). */
-export function svgToDataUrl(svg) {
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}

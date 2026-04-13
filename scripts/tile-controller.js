@@ -4,7 +4,7 @@ import {
   DEFAULT_FALLBACK_BOXES,
   MODULE_ID,
 } from "./constants.js";
-import { generateHealthSVG, svgToDataUrl } from "./health-svg.js";
+import { getPlaceholderTextureSrc } from "./texture-upload.js";
 import {
   getMonitorFlags,
   isHealthMonitorTile,
@@ -31,13 +31,7 @@ export async function createHealthMonitorTileAt(canvasPoint) {
   const x = Math.round(snapped.x - width / 2);
   const y = Math.round(snapped.y - height / 2);
 
-  const placeholderSvg = generateHealthSVG(
-    Array(num).fill(""),
-    boxW,
-    boxH,
-    { mode: "unlinked" }
-  );
-  const src = svgToDataUrl(placeholderSvg);
+  const src = getPlaceholderTextureSrc();
 
   const [created] = await scene.createEmbeddedDocuments("Tile", [
     {
@@ -101,6 +95,9 @@ async function beginPlacementMode() {
     const local = event.getLocalPosition(canvas.stage);
     const tileDoc = await createHealthMonitorTileAt(local);
     endPlacementMode();
+    if (tileDoc && game.user?.isGM) {
+      await refreshHealthMonitorTile(tileDoc);
+    }
     if (tileDoc) await openHealthConfigDialog(tileDoc);
   };
 

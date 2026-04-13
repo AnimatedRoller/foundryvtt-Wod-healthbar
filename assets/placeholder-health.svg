@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="350" height="86" viewBox="0 0 350 86">
+  <g><rect x="0" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="25" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <g><rect x="50" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="75" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <g><rect x="100" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="125" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <g><rect x="150" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="175" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <g><rect x="200" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="225" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <g><rect x="250" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="275" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <g><rect x="300" y="0" width="50" height="60" fill="#f0f0f0" stroke="#000" stroke-width="2"/><text x="325" y="30" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="bold" fill="#111" text-anchor="middle" dominant-baseline="central">?</text></g>
+  <text x="175" y="76" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#333" text-anchor="middle">No actor linked  right-click or HUD to configure</text>
+</svg>

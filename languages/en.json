@@ -12,5 +12,6 @@
   "WOD20HM.ContextConfigure": "Link Actor / Configure",
   "WOD20HM.HudConfigure": "Link actor",
   "WOD20HM.ErrNoCanvas": "Canvas is not ready; open a scene first.",
-  "WOD20HM.ErrNoPermission": "You do not have permission to modify this scene’s tiles."
+  "WOD20HM.ErrNoPermission": "You do not have permission to modify this scene’s tiles.",
+  "WOD20HM.ErrTextureUpload": "Could not save health tile image to world data. Ensure you are GM and have upload permission."
 }
