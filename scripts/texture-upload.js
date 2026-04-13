@@ -15,7 +15,10 @@ export async function uploadSvgAsWorldTexture(svgString, tileDocumentId, version
   const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
   const file = new File([blob], fileName, { type: "image/svg+xml" });
 
-  const FP = globalThis.FilePicker ?? foundry.applications.apps.FilePicker;
+  const FP =
+    foundry?.applications?.apps?.FilePicker?.implementation ??
+    foundry?.applications?.apps?.FilePicker ??
+    globalThis.FilePicker;
   if (typeof FP?.upload !== "function") {
     throw new Error(`${MODULE_ID}: FilePicker.upload is not available`);
   }

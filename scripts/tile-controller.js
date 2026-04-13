@@ -29,7 +29,10 @@ export async function createHealthMonitorTileAt(canvasPoint) {
     mode: "unlinked",
   });
 
-  const snapped = canvas.grid.getSnappedPosition(canvasPoint.x, canvasPoint.y);
+  const snapped =
+    typeof canvas.grid.getSnappedPoint === "function"
+      ? canvas.grid.getSnappedPoint({ x: canvasPoint.x, y: canvasPoint.y })
+      : canvas.grid.getSnappedPosition(canvasPoint.x, canvasPoint.y);
   const x = Math.round(snapped.x - width / 2);
   const y = Math.round(snapped.y - height / 2);
 

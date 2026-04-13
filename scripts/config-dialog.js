@@ -35,7 +35,9 @@ export async function openHealthConfigDialog(tileDocument) {
     selected: a.id === currentId || a.uuid === currentId,
   }));
   const templatePath = `modules/${MODULE_ID}/templates/health-config.html`;
-  const content = await renderTemplate(templatePath, {
+  const renderTpl =
+    foundry?.applications?.handlebars?.renderTemplate ?? globalThis.renderTemplate;
+  const content = await renderTpl(templatePath, {
     actors,
     blurb: game.i18n.localize("WOD20HM.ConfigBlurb"),
     actorLabel: game.i18n.localize("WOD20HM.ActorLabel"),

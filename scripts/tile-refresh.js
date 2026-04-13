@@ -1,6 +1,7 @@
 import { DEFAULT_FALLBACK_BOXES, MODULE_ID } from "./constants.js";
 import {
   generateHealthSVG,
+  getEmbeddedHealthAssetUris,
   getHealthTextureDimensions,
   parseHealthTrackFromActor,
 } from "./health-svg.js";
@@ -23,6 +24,7 @@ export async function refreshHealthMonitorTile(tileDocument) {
   if (!game.user?.isGM) return;
 
   const raw = mergeDefaultFlags(getMonitorFlags(tileDocument));
+  const assetUris = await getEmbeddedHealthAssetUris();
   const actor = resolveActor(raw.actorId);
   const boxW = raw.boxWidth;
   const boxH = raw.boxHeight;
@@ -43,7 +45,7 @@ export async function refreshHealthMonitorTile(tileDocument) {
     const parsed = parseHealthTrackFromActor(actor);
     track = parsed.track;
     const len = track.length;
-    const svg = generateHealthSVG(track, boxW, boxH, { mode });
+    const svg = generateHealthSVG(track, boxW, boxH, { mode, assetUris });
     let src;
     try {
       src = await uploadSvgAsWorldTexture(svg, tileDocument.id, Date.now());
@@ -70,7 +72,7 @@ export async function refreshHealthMonitorTile(tileDocument) {
     return;
   }
 
-  const svg = generateHealthSVG(track, boxW, boxH, { mode });
+  const svg = generateHealthSVG(track, boxW, boxH, { mode, assetUris });
   let src;
   try {
     src = await uploadSvgAsWorldTexture(svg, tileDocument.id, Date.now());

@@ -23,6 +23,7 @@ const ICON_BY_SYMBOL = {
   X: `/modules/${MODULE_ID}/Cross.png`,
   "*": `/modules/${MODULE_ID}/Star.png`,
 };
+let cachedAssetUris = null;
 
 /**
  * Map WoD20 health track cell values to the symbol shown in each box.
@@ -157,12 +158,16 @@ export function generateHealthSVG(
     if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
     const levelLabel = getLevelLabel(i);
     const iconPath = ICON_BY_SYMBOL[symbol];
+    const assets = options.assetUris ?? {};
+    const boxHref = assets.box ?? BOX_ASSET;
+    const iconHref = iconPath ? assets[symbol] ?? iconPath : null;
 
     boxes.push(`
       <g>
-        <image href="${escapeXml(BOX_ASSET)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>
-        ${iconPath
-          ? `<image href="${escapeXml(iconPath)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>`
+        <rect x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" fill="transparent" stroke="#fff" stroke-width="2"/>
+        <image href="${escapeXml(boxHref)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>
+        ${iconHref
+          ? `<image href="${escapeXml(iconHref)}" x="${x}" y="0" width="${boxWidth}" height="${boxHeight}" preserveAspectRatio="none"/>`
           : `<text x="${x + boxWidth / 2}" y="${boxHeight / 2}"
               font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
               font-size="${Math.floor(boxHeight * 0.88)}"
@@ -195,6 +200,27 @@ export function generateHealthSVG(
 </svg>`;
 }
 
+/**
+ * Load PNG assets and convert to data URLs so they always render when embedded
+ * inside uploaded SVG tile textures.
+ */
+export async function getEmbeddedHealthAssetUris() {
+  if (cachedAssetUris) return cachedAssetUris;
+  try {
+    const [box, slash, cross, star] = await Promise.all([
+      fetchAsDataUrl(BOX_ASSET),
+      fetchAsDataUrl(ICON_BY_SYMBOL["/"]),
+      fetchAsDataUrl(ICON_BY_SYMBOL["X"]),
+      fetchAsDataUrl(ICON_BY_SYMBOL["*"]),
+    ]);
+    cachedAssetUris = { box, "/": slash, X: cross, "*": star };
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Failed to preload box/icon assets`, err);
+    cachedAssetUris = null;
+  }
+  return cachedAssetUris;
+}
+
 export function getHealthTextureDimensions(
   numBoxes,
   boxWidth = DEFAULT_BOX_WIDTH,
@@ -219,5 +245,23 @@ function escapeXml(text) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+async function fetchAsDataUrl(path) {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`Asset fetch failed: ${path} (${response.status})`);
+  }
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
