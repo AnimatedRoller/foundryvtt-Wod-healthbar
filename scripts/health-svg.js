@@ -53,6 +53,17 @@ export function mapStatusToSymbol(status) {
 export function parseHealthTrackFromActor(actor) {
   const actorType = String(actor?.type ?? "");
   const systemData = actor?.system;
+  if (isWod5eHealth(systemData)) {
+    const parsed = buildTrackFromWod5eHealth(systemData.health);
+    return {
+      track: parsed,
+      secondaryTrack: null,
+      valid: true,
+      dicePenalty: 0,
+      levelLabels: null,
+      secondaryLevelLabels: null,
+    };
+  }
   const raw = actor?.system?.health?.track;
   const expectedBoxes = getExpectedHealthBoxCount(systemData, actorType);
   if (Array.isArray(raw)) {
@@ -179,6 +190,27 @@ function readHealthDicePenalty(systemData) {
   return 0;
 }
 
+function isWod5eHealth(systemData) {
+  const h = systemData?.health;
+  if (!h || typeof h !== "object") return false;
+  const hasMax = Number.isFinite(Number(h.max));
+  const hasDamageParts =
+    h.superficial !== undefined || h.aggravated !== undefined;
+  return hasMax && hasDamageParts;
+}
+
+function buildTrackFromWod5eHealth(healthNode) {
+  const max = Math.max(1, asNonNegativeInt(healthNode?.max) || 1);
+  const superficial = asNonNegativeInt(healthNode?.superficial);
+  const aggravated = asNonNegativeInt(healthNode?.aggravated);
+  const track = Array(max).fill("healthy");
+  let i = 0;
+  // WoD5e counters use x for aggravated and / for superficial.
+  for (let n = 0; n < aggravated && i < track.length; n++, i++) track[i] = "lethal";
+  for (let n = 0; n < superficial && i < track.length; n++, i++) track[i] = "bashing";
+  return track;
+}
+
 /**
  * Boxes per tier from system.health.<tier> (.total / .value), or 1 if the tier
  * exists as an object without a numeric count. Missing tier → 0.
@@ -260,6 +292,10 @@ export function trimLevelLabelsToTrack(labels, trackLen) {
  * Wraith: no per-box level labels; all linked types: dice penalty row.
  */
 export function getHealthSvgLayout(actor) {
+  const systemId = String(game?.system?.id ?? "").toLowerCase();
+  if (systemId === "wod5e") {
+    return { hideLevelLabels: true, showDicePenalty: false };
+  }
   if (!actor) {
     return { hideLevelLabels: false, showDicePenalty: false };
   }
@@ -311,6 +347,9 @@ function asNonNegativeInt(value) {
 }
 
 function getExpectedHealthBoxCount(systemData, actorType = "") {
+  if (isWod5eHealth(systemData)) {
+    return Math.max(1, asNonNegativeInt(systemData?.health?.max) || 1);
+  }
   const base = (
     asNonNegativeInt(systemData?.traits?.health?.totalhealthlevels?.value) ||
     estimateHealthLevelsFromMap(systemData?.health) ||

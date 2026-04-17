@@ -256,9 +256,10 @@ export function registerTileUiHooks() {
 
 export function registerReadyWarnings() {
   Hooks.once("ready", () => {
-    if (game.system?.id !== "WoD20") {
+    const id = String(game.system?.id ?? "");
+    if (id !== "WoD20" && id !== "wod5e") {
       console.info(
-        `${MODULE_ID} | Active system is "${game.system?.id ?? "unknown"}"; tiles use actor.system.health.track when present (WoD20 layout).`
+        `${MODULE_ID} | Active system is "${game.system?.id ?? "unknown"}"; tested layouts are WoD20 and WoD5E.`
       );
     }
   });
