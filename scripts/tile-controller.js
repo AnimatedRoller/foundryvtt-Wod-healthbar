@@ -150,6 +150,7 @@ export function registerSceneControls() {
 function actorHealthTrackChanged(changes) {
   const flat = foundry.utils.flattenObject(changes ?? {});
   return Object.keys(flat).some((k) =>
+    k.startsWith("system.health") ||
     k.startsWith("system.health.track") ||
     k.startsWith("system.health.damage") ||
     k.startsWith("system.health.woundpenalty") ||
