@@ -72,12 +72,10 @@ export async function openHealthConfigDialog(tileDocument) {
               const actor = id ? game.actors.get(id) : null;
               const parsed = actor ? parseHealthTrackFromActor(actor) : null;
               const willpower = actor ? parseWillpowerTrackFromActor(actor) : null;
-              const healthLen = parsed?.track?.length ?? 0;
               const willLen = willpower?.track?.length ?? 0;
-              const trackLen =
-                healthLen || willLen
-                  ? Math.max(healthLen, willLen)
-                  : null;
+              const trackLen = parsed
+                ? Math.max(parsed.track.length, willLen)
+                : null;
               const healthRows = parsed?.secondaryTrack ? 2 : 1;
               const willpowerRows = willpower ? countWillpowerSvgRows(willpower) : 0;
               const layout = actor ? getHealthSvgLayout(actor) : { hideLevelLabels: false, showDicePenalty: false };
