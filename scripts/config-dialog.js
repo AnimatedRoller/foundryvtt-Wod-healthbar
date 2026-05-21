@@ -91,6 +91,7 @@ export async function openHealthConfigDialog(tileDocument) {
                   mode: actor ? "normal" : "unlinked",
                   rows: healthRows,
                   extraRows: willpowerRows,
+                  willpowerWithoutLabels: willpowerRows > 0,
                   hideLevelLabels: layout.hideLevelLabels,
                   showDicePenalty: layout.showDicePenalty,
                 }

@@ -456,12 +456,10 @@ export function generateHealthSVG(
   const willpower = options.willpower ?? null;
   const willpowerRows = willpower?.track?.length ? 1 : 0;
   const healthRows = secondaryTrack ? 2 : 1;
-  const rows = healthRows + willpowerRows;
   const hideLevelLabels = options.hideLevelLabels === true;
   const labelUnder = hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
   const showDicePenalty =
     mode === "normal" && options.showDicePenalty === true;
-  const rowStride = boxHeight + labelUnder + ROW_GAP;
   const primaryLevelLabels = Array.isArray(options.levelLabels)
     ? options.levelLabels
     : null;
@@ -492,28 +490,44 @@ export function generateHealthSVG(
       label: "Willpower",
       labels: null,
       boxCount: willpower.track.length,
+      hideLabels: true,
     });
   }
 
-  const totalW = Math.max(
-    1,
-    ...rowSpecs.map(
-      (spec) => spec.boxCount * boxWidth + (spec.boxCount - 1) * HEALTH_BOX_GAP
-    )
-  );
+  const rowWidth = (boxCount) =>
+    boxCount * boxWidth + (boxCount - 1) * HEALTH_BOX_GAP;
 
-  const buildRow = (spec, rowIndex) => {
-    const { track, label: rowLabel, labels: labelsForRow, boxCount: n } = spec;
-    const rowY = rowIndex * rowStride;
+  const healthAnchorWidth = rowWidth(rowSpecs[0].boxCount);
+
+  for (const spec of rowSpecs) {
+    const w = rowWidth(spec.boxCount);
+    spec.offsetX =
+      spec.hideLabels && w < healthAnchorWidth
+        ? (healthAnchorWidth - w) / 2
+        : 0;
+  }
+
+  const totalW = Math.max(healthAnchorWidth, ...rowSpecs.map((s) => rowWidth(s.boxCount)));
+
+  const buildRow = (spec, rowY) => {
+    const {
+      track,
+      label: rowLabel,
+      labels: labelsForRow,
+      boxCount: n,
+      offsetX = 0,
+      hideLabels: rowHideLabels = false,
+    } = spec;
+    const rowW = rowWidth(n);
     const row = [];
     if (rowLabel) {
       row.push(
-        `<text x="0" y="${rowY - 4}" font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif" font-size="11" fill="#ddd" text-anchor="start">${escapeXml(rowLabel)}</text>`
+        `<text x="${offsetX + rowW / 2}" y="${rowY - 4}" font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif" font-size="11" fill="#ddd" text-anchor="middle">${escapeXml(rowLabel)}</text>`
       );
     }
 
     for (let i = 0; i < n; i++) {
-      const x = i * (boxWidth + HEALTH_BOX_GAP);
+      const x = offsetX + i * (boxWidth + HEALTH_BOX_GAP);
       let symbol = mapStatusToSymbol(track[i]);
       if (mode === "unlinked") symbol = "?";
       if (mode === "error") symbol = i === Math.floor(n / 2) ? "⚠" : "";
@@ -522,9 +536,9 @@ export function generateHealthSVG(
       const assets = options.assetUris ?? {};
       const boxHref = assets.box ?? BOX_ASSET;
       const iconHref = iconPath ? assets[symbol] ?? iconPath : null;
-      const levelText = hideLevelLabels
-        ? ""
-        : `<text x="${x + boxWidth / 2}" y="${rowY + boxHeight + 12}"
+      const showLevelText = !hideLevelLabels && !rowHideLabels;
+      const levelText = showLevelText
+        ? `<text x="${x + boxWidth / 2}" y="${rowY + boxHeight + 12}"
           font-family="'Modesto Condensed', 'Modesto', Arial, Helvetica, sans-serif"
           font-size="11"
           fill="#fff"
@@ -550,13 +564,17 @@ export function generateHealthSVG(
     return row.join("\n");
   };
 
+  let rowY = 0;
   for (let r = 0; r < rowSpecs.length; r++) {
-    boxes.push(buildRow(rowSpecs[r], r));
+    const spec = rowSpecs[r];
+    boxes.push(buildRow(spec, rowY));
+    const labelBand =
+      hideLevelLabels || spec.hideLabels ? 0 : LEVEL_LABEL_HEIGHT;
+    rowY += boxHeight + labelBand;
+    if (r < rowSpecs.length - 1) rowY += ROW_GAP;
   }
 
-  const rowsContentHeight =
-    rows * (boxHeight + labelUnder) + (rows - 1) * ROW_GAP;
-  let totalH = rowsContentHeight;
+  let totalH = rowY;
   let dicePenaltyLine = "";
   if (showDicePenalty) {
     const lineY = rowsContentHeight + 18;
@@ -611,26 +629,32 @@ export function getHealthTextureDimensions(
 ) {
   const n = Math.max(1, Number(numBoxes) || DEFAULT_FALLBACK_BOXES);
   const mode = options.mode ?? "normal";
-  const rows = Math.max(1, Number(options.rows) || 1);
-  const extraRows = Math.max(0, Number(options.extraRows) || 0);
-  const totalRows = rows + extraRows;
+  const healthRows = Math.max(1, Number(options.rows) || 1);
+  const willpowerRows = Math.max(0, Number(options.extraRows) || 0);
+  const willpowerWithoutLabels = options.willpowerWithoutLabels === true;
   const labelUnder = options.hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
   const diceBand =
     mode === "normal" && options.showDicePenalty ? DICE_PENALTY_BAND_HEIGHT : 0;
   const width = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const footer = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
+  const labeledRowCount = healthRows + (willpowerWithoutLabels ? 0 : willpowerRows);
+  const unlabeledRowCount = willpowerWithoutLabels ? willpowerRows : 0;
+  const totalRows = healthRows + willpowerRows;
   const height =
-    totalRows * (boxHeight + labelUnder) +
-    (totalRows - 1) * ROW_GAP +
+    labeledRowCount * (boxHeight + labelUnder) +
+    unlabeledRowCount * boxHeight +
+    (totalRows > 0 ? (totalRows - 1) * ROW_GAP : 0) +
     diceBand +
     footer;
   return { width, height };
 }
 
 function resolveBoxLevelLabel(labelsForRow, index) {
+  if (labelsForRow === null) return "";
   if (Array.isArray(labelsForRow) && labelsForRow[index] != null) {
     return String(labelsForRow[index]);
   }
+  if (Array.isArray(labelsForRow)) return "";
   return DEFAULT_LEVEL_LABELS[index] ?? `level ${index + 1}`;
 }
 
