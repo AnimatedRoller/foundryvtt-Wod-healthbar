@@ -2,11 +2,7 @@
   "id": "wod20-health-monitor",
   "title": "WoD20 Health Monitor",
   "description": "Place tiles that mirror WoD actor health and willpower tracks (/, X, *) and update when they change.",
-<<<<<<< HEAD
   "version": "1.0.25",
-=======
-  "version": "1.0.18",
->>>>>>> parent of 3b366f5 (accidently had 2 rows showing for willpower)
   "authors": [
     {
       "name": "WoD20 Health Monitor"
