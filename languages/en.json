@@ -1,12 +1,6 @@
 {
   "WOD20HM.PlaceHealthMonitor": "Place Health Monitor",
-  "WOD20HM.KeybindPlaceHint": "Place a health/willpower monitor tile on the scene (Tiles layer).",
-  "WOD20HM.SettingsMenuName": "Placement",
-  "WOD20HM.SettingsMenuLabel": "Place Health Monitor",
-  "WOD20HM.SettingsMenuHint": "Use this if the Tiles toolbar button or keybinding is hard to find. Click below, then click the scene to place a monitor tile.",
   "WOD20HM.PlacementHint": "Tiles layer: click the scene to place a health monitor tile. Press Esc or pick another tool to cancel.",
-  "WOD20HM.ReadyHint": "WoD Health Monitor: Game Settings → Module Settings → WoD20 Health Monitor (cog) → Place Health Monitor. Or Tiles layer → heart icon. Keybind: Ctrl+Shift+P. Chat: /phm",
-  "WOD20HM.MacroHint": "Macro script: game.modules.get(\"wod20-health-monitor\").api.placeMonitor()",
   "WOD20HM.PlacementCancelled": "Health monitor placement cancelled.",
   "WOD20HM.ConfigTitle": "Health Monitor — Link Actor",
   "WOD20HM.ConfigBlurb": "Choose a character or NPC whose health and willpower this tile should mirror. Health: empty, / (bashing), X (lethal), * (aggravated). Willpower: one row with a box per maximum willpower; X marks temporary willpower (WoD5e uses the same damage-style track as health).",

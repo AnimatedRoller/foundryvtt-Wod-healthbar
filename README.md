@@ -28,42 +28,12 @@ A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for **World
 
 ### 1. Place a health monitor tile
 
-**Option A — Game Settings (most reliable on Foundry v13)**
+1. Open the **Tiles** layer (tiles icon in the scene controls).
+2. Click **Place Health Monitor** (heart-pulse icon) in the tiles tool strip.
+3. Foundry switches focus to the tiles layer if needed. **Left-click** where you want the tile on the scene.
+4. A new tile appears (placeholder row of **?** boxes) and the **Health Monitor — Link Actor** dialog opens.
 
-1. Open **Game Settings** (gear icon, right sidebar).
-2. Scroll to **Module Settings**.
-3. Find **WoD20 Health Monitor** and click the **cog / Configure** button on that row (not the global **Configure Controls** page).
-4. Choose **Place Health Monitor**, then **left-click** the scene.
-
-**Option B — Tiles toolbar**
-
-1. Open a **scene** on the canvas.
-2. Click **Tiles** in the left scene controls.
-3. In the tile tool strip on the canvas edge, click the **heart** icon (**Place Health Monitor**).
-4. **Left-click** on the scene.
-
-**Option C — Keybinding**
-
-1. Open a scene, then press **Ctrl+Shift+P** (default).
-2. To change it: **Game Settings** → **Configure Controls** → search **WoD20** or **Place Health Monitor**.
-3. Avoid **Alt+H** — Firefox uses that shortcut.
-
-**Option D — Chat**
-
-1. Type `/phm` in chat and press Enter (v1.0.23+).
-2. **Left-click** on the scene.
-
-**Option E — Macro**
-
-Create a Script macro with:
-
-```javascript
-game.modules.get("wod20-health-monitor").api.placeMonitor();
-```
-
-After placing, the **Health Monitor — Link Actor** dialog opens. A new tile shows a placeholder row of **?** boxes until you link an actor.
-
-**Cancel placement:** press **Esc**, or choose another tool (e.g. tile **Select**).
+**Cancel placement:** press **Esc**, or choose another tool (e.g. tile **Select**). You can also end placement from the same control strip.
 
 ### 2. Link an actor
 
@@ -103,8 +73,7 @@ You can link **several** tiles to the **same** actor. All of them refresh when t
 
 | Issue | What to check |
 |--------|----------------|
-| **Place Health Monitor** does not appear | Use **Game Settings** → **Module Settings** → **cog** next to WoD20 Health Monitor (not the global Configure Controls page). Reload the world after updating the module. Try **Ctrl+Shift+P** or the macro in Option E. |
-| Console spam from **parallax-tiles** | That module errors on monitor tiles; v1.0.22 marks them ignored. Update both modules or temporarily disable parallax-tiles if it persists. |
+| **Place Health Monitor** does not appear | Confirm you are on the **Tiles** layer with permission to edit the scene; restart Foundry after install if the package list looks stale. |
 | Nothing happens when placing | Stay on the **Tiles** layer; placement listens while that layer is active. Use **Esc** and try the tool again. |
 | Tile shows “Linked actor missing” | The linked actor was **deleted** from the world. Open **Link Actor / Configure** and link a valid actor or **Unlink**. |
 | Symbols do not match the sheet | The module reads `actor.system.health.track`. If your sheet or modules store health elsewhere, they may not match until data matches the WoD20 shape described in the module specification. |
