@@ -1,6 +1,7 @@
 import { MODULE_ID } from "./constants.js";
 import {
   registerActorAndTileHooks,
+  registerPlacementFallbacks,
   registerReadyWarnings,
   registerSceneControls,
   registerTileUiHooks,
@@ -11,8 +12,10 @@ Hooks.once("init", () => {
   registerActorAndTileHooks();
   registerTileUiHooks();
   registerReadyWarnings();
+  registerPlacementFallbacks();
 });
 
 Hooks.once("ready", () => {
-  console.log(`${MODULE_ID} | WoD20 Health Monitor ready.`);
+  ui.notifications?.info(game.i18n.localize("WOD20HM.ReadyHint"), { permanent: false });
+  console.log(`${MODULE_ID} | Ready (Foundry ${game.version}).`);
 });

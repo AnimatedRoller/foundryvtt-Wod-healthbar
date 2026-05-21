@@ -29,8 +29,8 @@ A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for **World
 ### 1. Place a health monitor tile
 
 1. Open the **Tiles** layer (tiles icon in the scene controls).
-2. Click **Place Health Monitor** (heart-pulse icon) in the tiles tool strip.
-3. Foundry switches focus to the tiles layer if needed. **Left-click** where you want the tile on the scene.
+2. Click **Place Health Monitor** (heart-pulse icon) in the tiles tool strip, **or** use **Game Settings → Module Settings → WoD20 Health Monitor → cog → Place Health Monitor**, **or** press **Ctrl+Shift+P**.
+3. **Left-click** where you want the tile on the scene.
 4. A new tile appears (placeholder row of **?** boxes) and the **Health Monitor — Link Actor** dialog opens.
 
 **Cancel placement:** press **Esc**, or choose another tool (e.g. tile **Select**). You can also end placement from the same control strip.
@@ -73,7 +73,7 @@ You can link **several** tiles to the **same** actor. All of them refresh when t
 
 | Issue | What to check |
 |--------|----------------|
-| **Place Health Monitor** does not appear | Confirm you are on the **Tiles** layer with permission to edit the scene; restart Foundry after install if the package list looks stale. |
+| **Place Health Monitor** does not appear | Update to **v1.0.27+** (v13 needs array-style scene controls). Use **Module Settings → cog** or **Ctrl+Shift+P** as a fallback. |
 | Nothing happens when placing | Stay on the **Tiles** layer; placement listens while that layer is active. Use **Esc** and try the tool again. |
 | Tile shows “Linked actor missing” | The linked actor was **deleted** from the world. Open **Link Actor / Configure** and link a valid actor or **Unlink**. |
 | Symbols do not match the sheet | The module reads `actor.system.health.track`. If your sheet or modules store health elsewhere, they may not match until data matches the WoD20 shape described in the module specification. |
