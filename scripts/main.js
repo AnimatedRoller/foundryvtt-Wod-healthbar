@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./constants.js";
 import {
+  exposePlacementApi,
   registerPlacementAccess,
   registerPlacementKeybinding,
   registerPlacementSettingsMenu,
@@ -19,10 +20,10 @@ Hooks.once("init", () => {
   registerPlacementKeybinding();
   registerPlacementAccess();
   registerPlacementSettingsMenu();
+  exposePlacementApi();
 });
 
 Hooks.once("ready", () => {
-  console.log(
-    `${MODULE_ID} | Ready. Place via Tiles (heart icon), Alt+H, chat /phm, or Game Settings → ${game.modules.get(MODULE_ID)?.title ?? MODULE_ID} → Place Health Monitor.`
-  );
+  ui.notifications?.info(game.i18n.localize("WOD20HM.ReadyHint"), { permanent: false });
+  console.log(`${MODULE_ID} | Ready (Foundry ${game.version}).`);
 });

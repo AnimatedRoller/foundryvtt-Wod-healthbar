@@ -168,8 +168,7 @@ export function mayPlaceHealthMonitor() {
   );
 }
 
-function onPlaceHealthMonitorTool(_event, active) {
-  if (active === false) return;
+function invokePlaceHealthMonitorTool() {
   if (!mayPlaceHealthMonitor()) {
     ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
     return;
@@ -177,7 +176,13 @@ function onPlaceHealthMonitorTool(_event, active) {
   void beginPlacementMode();
 }
 
-function registerPlaceHealthMonitorTool(tilesControl) {
+function onPlaceHealthMonitorTool(_event, active) {
+  if (active === false) return;
+  invokePlaceHealthMonitorTool();
+}
+
+/** @param {{ tools: Record<string, object> }} tilesControl */
+export function registerPlaceHealthMonitorOnControl(tilesControl) {
   const tools = tilesControl.tools;
   const orders = Object.values(tools).map((t) => Number(t?.order) || 0);
   const order = orders.length ? Math.max(...orders) + 1 : 0;
@@ -185,10 +190,11 @@ function registerPlaceHealthMonitorTool(tilesControl) {
   tools.wod20HealthMonitor = {
     name: "wod20HealthMonitor",
     title: game.i18n?.localize?.("WOD20HM.PlaceHealthMonitor") ?? "Place Health Monitor",
-    icon: "fa-solid fa-heart-pulse",
+    icon: "fas fa-heart-pulse",
     order,
     button: true,
     visible: true,
+    onClick: invokePlaceHealthMonitorTool,
     onChange: onPlaceHealthMonitorTool,
   };
 }
@@ -202,7 +208,7 @@ export function registerSceneControls() {
       );
       return;
     }
-    registerPlaceHealthMonitorTool(tiles);
+    registerPlaceHealthMonitorOnControl(tiles);
   });
 }
 

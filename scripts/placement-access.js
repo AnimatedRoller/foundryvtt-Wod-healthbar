@@ -1,29 +1,60 @@
 import { MODULE_ID } from "./constants.js";
-import { beginPlacementMode, mayPlaceHealthMonitor } from "./tile-controller.js";
+import {
+  beginPlacementMode,
+  mayPlaceHealthMonitor,
+  registerPlaceHealthMonitorOnControl,
+} from "./tile-controller.js";
 
-const CHAT_COMMANDS = new Set(["/place-health-monitor", "/phm", "/healthmonitor"]);
+const CHAT_TRIGGERS = new Set(["/phm", "/place-health-monitor", "/healthmonitor"]);
 
 /**
- * @param {string} content
+ * Foundry 13.351: slash commands must be handled before core marks them invalid.
  */
-export function isPlaceHealthMonitorCommand(content) {
-  return CHAT_COMMANDS.has(String(content ?? "").trim().toLowerCase());
+function patchChatLogProcessMessage() {
+  const ChatLog = foundry.applications?.sidebar?.tabs?.ChatLog;
+  if (!ChatLog?.prototype?.processMessage || ChatLog.prototype._wod20hmPatched) return;
+  const original = ChatLog.prototype.processMessage;
+  ChatLog.prototype.processMessage = async function (message, options = {}) {
+    const text = String(message ?? "").trim().toLowerCase();
+    if (CHAT_TRIGGERS.has(text)) {
+      if (!mayPlaceHealthMonitor()) {
+        ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
+        return;
+      }
+      await beginPlacementMode();
+      return;
+    }
+    return original.call(this, message, options);
+  };
+  ChatLog.prototype._wod20hmPatched = true;
+}
+
+/**
+ * Foundry 13 builds tile tools from TilesLayer.prepareSceneControls — not only getSceneControlButtons.
+ */
+function patchTilesLayerSceneControls() {
+  const TilesLayer =
+    foundry.canvas?.layers?.TilesLayer ?? CONFIG.Canvas?.layers?.tiles?.layerClass;
+  if (!TilesLayer?.prepareSceneControls || TilesLayer._wod20hmPatched) return;
+
+  const original = TilesLayer.prepareSceneControls;
+  TilesLayer.prepareSceneControls = function () {
+    const control = original.call(this);
+    if (control?.tools) registerPlaceHealthMonitorOnControl(control);
+    return control;
+  };
+  TilesLayer._wod20hmPatched = true;
 }
 
 export function registerPlacementAccess() {
-  Hooks.on("chatMessage", (chatLog, message, _chatData) => {
-    if (!isPlaceHealthMonitorCommand(message?.content)) return;
-    if (!mayPlaceHealthMonitor()) {
-      ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
-      return false;
-    }
-    void beginPlacementMode();
-    return false;
+  Hooks.once("ready", () => {
+    patchChatLogProcessMessage();
+    patchTilesLayerSceneControls();
   });
 }
 
 /**
- * Game Settings → module config menu (always available when the module is active).
+ * Game Settings → Module Settings → cog next to this module → Place Health Monitor
  */
 export function registerPlacementSettingsMenu() {
   const PlaceMonitorMenu = class PlaceMonitorMenu extends FormApplication {
@@ -74,18 +105,32 @@ export function registerPlacementKeybinding() {
     return;
   }
 
-  game.keybindings.register(MODULE_ID, "placeHealthMonitor", {
-    name: "WOD20HM.PlaceHealthMonitor",
-    hint: "WOD20HM.KeybindPlaceHint",
-    editable: [{ key: "KeyH", modifiers: ["ALT"] }],
-    onDown: () => {
-      if (!mayPlaceHealthMonitor()) {
-        ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
-        return false;
-      }
-      void beginPlacementMode();
-      return true;
-    },
-    precedence: CONST?.KEYBINDING_PRECEDENCE_NORMAL ?? 50,
+  try {
+    game.keybindings.register(MODULE_ID, "placeHealthMonitor", {
+      name: "WOD20HM.PlaceHealthMonitor",
+      hint: "WOD20HM.KeybindPlaceHint",
+      editable: [{ key: "KeyP", modifiers: ["CONTROL", "SHIFT"] }],
+      onDown: () => {
+        if (!mayPlaceHealthMonitor()) {
+          ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
+          return false;
+        }
+        void beginPlacementMode();
+        return true;
+      },
+      precedence: CONST?.KEYBINDING_PRECEDENCE_NORMAL ?? 50,
+    });
+  } catch (err) {
+    console.error(`${MODULE_ID} | Keybinding registration failed`, err);
+  }
+}
+
+export function exposePlacementApi() {
+  Hooks.once("ready", () => {
+    const mod = game.modules.get(MODULE_ID);
+    if (!mod) return;
+    mod.api = {
+      placeMonitor: () => beginPlacementMode(),
+    };
   });
 }
