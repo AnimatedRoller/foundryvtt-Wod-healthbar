@@ -11,6 +11,7 @@ import {
   isHealthMonitorTile,
   mergeDefaultFlags,
 } from "./flags.js";
+import { registerActorMonitorHooks } from "./actor-monitor-hooks.js";
 import { refreshHealthMonitorTile } from "./tile-refresh.js";
 import { openHealthConfigDialog } from "./config-dialog.js";
 
@@ -147,54 +148,8 @@ export function registerSceneControls() {
   });
 }
 
-function actorHealthTrackChanged(changes) {
-  const flat = foundry.utils.flattenObject(changes ?? {});
-  return Object.keys(flat).some((k) =>
-    k.startsWith("system.health") ||
-    k.startsWith("system.health.track") ||
-    k.startsWith("system.health.damage") ||
-    k.startsWith("system.health.woundpenalty") ||
-    k.startsWith("system.health.woundPenalty") ||
-    k.startsWith("system.traits.health.totalhealthlevels") ||
-    k.startsWith("system.health.bruised") ||
-    k.startsWith("system.health.hurt") ||
-    k.startsWith("system.health.injured") ||
-    k.startsWith("system.health.wounded") ||
-    k.startsWith("system.health.mauled") ||
-    k.startsWith("system.health.crippled") ||
-    k.startsWith("system.health.incapacitated")
-  );
-}
-
 export function registerActorAndTileHooks() {
-  Hooks.on("updateActor", (actor, changes, _options, _userId) => {
-    if (!actorHealthTrackChanged(changes)) return;
-    if (!canvas?.tiles?.placeables) return;
-    for (const t of canvas.tiles.placeables) {
-      const doc = t.document;
-      if (!isHealthMonitorTile(doc)) continue;
-      const cfg = mergeDefaultFlags(getMonitorFlags(doc));
-      if (!cfg.actorId) continue;
-      if (cfg.actorId !== actor.id && cfg.actorId !== actor.uuid) continue;
-      refreshHealthMonitorTile(doc).catch((e) =>
-        console.error(`${MODULE_ID} | updateActor refresh failed`, e)
-      );
-    }
-  });
-
-  Hooks.on("deleteActor", (actor, _options, _userId) => {
-    if (!canvas?.tiles?.placeables) return;
-    for (const t of canvas.tiles.placeables) {
-      const doc = t.document;
-      if (!isHealthMonitorTile(doc)) continue;
-      const cfg = mergeDefaultFlags(getMonitorFlags(doc));
-      if (!cfg.actorId) continue;
-      if (cfg.actorId !== actor.id && cfg.actorId !== actor.uuid) continue;
-      refreshHealthMonitorTile(doc).catch((e) =>
-        console.error(`${MODULE_ID} | deleteActor refresh failed`, e)
-      );
-    }
-  });
+  registerActorMonitorHooks();
 
   Hooks.on("updateTile", (tileDocument, changed, _options, _userId) => {
     if (!changed.flags?.[MODULE_ID]) return;
@@ -258,9 +213,9 @@ export function registerTileUiHooks() {
 export function registerReadyWarnings() {
   Hooks.once("ready", () => {
     const id = String(game.system?.id ?? "");
-    if (id !== "WoD20" && id !== "wod5e") {
+    if (id !== "WoD20" && id !== "wod5e" && id !== "worldofdarkness") {
       console.info(
-        `${MODULE_ID} | Active system is "${game.system?.id ?? "unknown"}"; tested layouts are WoD20 and WoD5E.`
+        `${MODULE_ID} | Active system is "${game.system?.id ?? "unknown"}"; tested layouts are WoD20, worldofdarkness, and WoD5E.`
       );
     }
   });

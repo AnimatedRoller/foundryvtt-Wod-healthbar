@@ -1,6 +1,6 @@
 # WoD20 Health Monitor
 
-A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for the **World of Darkness 20th Anniversary** system ([WoD20](https://github.com/JohanFalt/Foundry_WoD20)). It adds **tiles** that mirror an actor’s health track from the character sheet—empty boxes, **/**, **X**, and **\***—and **update automatically** when that actor’s health changes.
+A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for **World of Darkness** games on Foundry ([WoD20 / worldofdarkness](https://github.com/JohanFalt/Foundry_WoD20), [WoD5e](https://github.com/WoD5E-Developers/wod5e)). It adds **tiles** that mirror an actor’s **health** and **willpower** from the character sheet—empty boxes, **/**, **X**, and **\***—and **update automatically** when those values change.
 
 ---
 
@@ -50,7 +50,7 @@ The tile resizes to match that actor’s health **track length** and shows the s
 | Lethal | **X** |
 | Aggravated | **\*** |
 
-Changing health on the **actor sheet** (or anything that updates `system.health.track`) updates **every** tile linked to that actor.
+Changing health or willpower on the **actor sheet** updates **every** tile linked to that actor. WoD20/worldofdarkness willpower shows **maximum** (/) and **temporary** (X) rows; WoD5e uses the same superficial/aggravated track style as health.
 
 ### 3. Change or remove the link later
 

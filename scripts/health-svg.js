@@ -190,25 +190,98 @@ function readHealthDicePenalty(systemData) {
   return 0;
 }
 
-function isWod5eHealth(systemData) {
-  const h = systemData?.health;
-  if (!h || typeof h !== "object") return false;
-  const hasMax = Number.isFinite(Number(h.max));
+function isWod5ePool(systemData, key) {
+  const node = systemData?.[key];
+  if (!node || typeof node !== "object") return false;
+  const hasMax = Number.isFinite(Number(node.max));
   const hasDamageParts =
-    h.superficial !== undefined || h.aggravated !== undefined;
+    node.superficial !== undefined || node.aggravated !== undefined;
   return hasMax && hasDamageParts;
 }
 
-function buildTrackFromWod5eHealth(healthNode) {
-  const max = Math.max(1, asNonNegativeInt(healthNode?.max) || 1);
-  const superficial = asNonNegativeInt(healthNode?.superficial);
-  const aggravated = asNonNegativeInt(healthNode?.aggravated);
+function isWod5eHealth(systemData) {
+  return isWod5ePool(systemData, "health");
+}
+
+function isWod5eWillpower(systemData) {
+  return isWod5ePool(systemData, "willpower");
+}
+
+function buildTrackFromWod5ePool(poolNode) {
+  const max = Math.max(1, asNonNegativeInt(poolNode?.max) || 1);
+  const superficial = asNonNegativeInt(poolNode?.superficial);
+  const aggravated = asNonNegativeInt(poolNode?.aggravated);
   const track = Array(max).fill("healthy");
   let i = 0;
   // WoD5e counters use x for aggravated and / for superficial.
   for (let n = 0; n < aggravated && i < track.length; n++, i++) track[i] = "lethal";
   for (let n = 0; n < superficial && i < track.length; n++, i++) track[i] = "bashing";
   return track;
+}
+
+function buildTrackFromWod5eHealth(healthNode) {
+  return buildTrackFromWod5ePool(healthNode);
+}
+
+/**
+ * Resolve willpower data for WoD5e, WoD20 / worldofdarkness embedded advantages, or Advantage items.
+ */
+function resolveWillpowerNode(actor) {
+  const systemData = actor?.system;
+  if (isWod5eWillpower(systemData)) {
+    return { kind: "wod5e", node: systemData.willpower };
+  }
+  const embedded = systemData?.advantages?.willpower;
+  if (embedded && typeof embedded === "object" && Number.isFinite(Number(embedded.max))) {
+    return { kind: "wod20", node: embedded };
+  }
+  const item = actor?.items?.find((i) => {
+    const id = String(i.system?.id ?? "").toLowerCase();
+    return i.type === "Advantage" && id === "willpower";
+  });
+  if (item?.system && Number.isFinite(Number(item.system.max))) {
+    return { kind: "wod20", node: item.system };
+  }
+  return null;
+}
+
+function buildWillpowerFromWod20Advantage(node) {
+  const max = Math.max(1, asNonNegativeInt(node?.max) || 1);
+  const permanent = asNonNegativeInt(node?.permanent);
+  const temporary = asNonNegativeInt(node?.temporary);
+  const permanentTrack = Array(max).fill("healthy");
+  const temporaryTrack = Array(max).fill("healthy");
+  for (let i = 0; i < max; i++) {
+    if (i < permanent) permanentTrack[i] = "bashing";
+    if (temporary > i) temporaryTrack[i] = "lethal";
+  }
+  return { track: permanentTrack, secondaryTrack: temporaryTrack, valid: true };
+}
+
+/**
+ * Parse willpower for display on the monitor tile (matches sheet box semantics).
+ */
+export function parseWillpowerTrackFromActor(actor) {
+  const resolved = resolveWillpowerNode(actor);
+  if (!resolved) {
+    return { track: null, secondaryTrack: null, valid: false, rowCount: 0 };
+  }
+  if (resolved.kind === "wod5e") {
+    const track = buildTrackFromWod5ePool(resolved.node);
+    return { track, secondaryTrack: null, valid: true, rowCount: 1 };
+  }
+  const built = buildWillpowerFromWod20Advantage(resolved.node);
+  return {
+    track: built.track,
+    secondaryTrack: built.secondaryTrack,
+    valid: built.valid,
+    rowCount: 2,
+  };
+}
+
+export function countWillpowerSvgRows(willpowerParsed) {
+  if (!willpowerParsed?.valid || !willpowerParsed.track?.length) return 0;
+  return willpowerParsed.secondaryTrack ? 2 : 1;
 }
 
 /**
@@ -377,7 +450,14 @@ export function generateHealthSVG(
   const secondaryTrack = Array.isArray(options.secondaryTrack)
     ? options.secondaryTrack
     : null;
-  const rows = secondaryTrack ? 2 : 1;
+  const willpower = options.willpower ?? null;
+  const willpowerRows = willpower?.track?.length
+    ? willpower.secondaryTrack
+      ? 2
+      : 1
+    : 0;
+  const healthRows = secondaryTrack ? 2 : 1;
+  const rows = healthRows + willpowerRows;
   const hideLevelLabels = options.hideLevelLabels === true;
   const labelUnder = hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
   const showDicePenalty =
@@ -453,6 +533,26 @@ export function generateHealthSVG(
     );
   }
 
+  if (willpower?.track?.length) {
+    const wpLen = willpower.track.length;
+    const wpTrack = [...willpower.track];
+    while (wpTrack.length < n) wpTrack.push("healthy");
+    const wpSlice = wpTrack.slice(0, n);
+    let wpSecondary = null;
+    if (willpower.secondaryTrack) {
+      wpSecondary = [...willpower.secondaryTrack];
+      while (wpSecondary.length < n) wpSecondary.push("healthy");
+      wpSecondary = wpSecondary.slice(0, n);
+    }
+    const wpStart = healthRows;
+    if (wpSecondary) {
+      boxes.push(buildRow(wpSlice, wpStart, "Willpower (max)", null));
+      boxes.push(buildRow(wpSecondary, wpStart + 1, "Willpower (temp)", null));
+    } else {
+      boxes.push(buildRow(wpSlice, wpStart, "Willpower", null));
+    }
+  }
+
   const rowsContentHeight =
     rows * (boxHeight + labelUnder) + (rows - 1) * ROW_GAP;
   let totalH = rowsContentHeight;
@@ -511,14 +611,16 @@ export function getHealthTextureDimensions(
   const n = Math.max(1, Number(numBoxes) || DEFAULT_FALLBACK_BOXES);
   const mode = options.mode ?? "normal";
   const rows = Math.max(1, Number(options.rows) || 1);
+  const extraRows = Math.max(0, Number(options.extraRows) || 0);
+  const totalRows = rows + extraRows;
   const labelUnder = options.hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
   const diceBand =
     mode === "normal" && options.showDicePenalty ? DICE_PENALTY_BAND_HEIGHT : 0;
   const width = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
   const footer = mode === "unlinked" || mode === "error" ? FOOTER_LABEL_HEIGHT : 0;
   const height =
-    rows * (boxHeight + labelUnder) +
-    (rows - 1) * ROW_GAP +
+    totalRows * (boxHeight + labelUnder) +
+    (totalRows - 1) * ROW_GAP +
     diceBand +
     footer;
   return { width, height };

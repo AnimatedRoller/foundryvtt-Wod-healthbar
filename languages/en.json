@@ -3,7 +3,7 @@
   "WOD20HM.PlacementHint": "Tiles layer: click the scene to place a health monitor tile. Press Esc or pick another tool to cancel.",
   "WOD20HM.PlacementCancelled": "Health monitor placement cancelled.",
   "WOD20HM.ConfigTitle": "Health Monitor — Link Actor",
-  "WOD20HM.ConfigBlurb": "Choose a character or NPC whose health track this tile should mirror. Symbols match the sheet: / (bashing), X (lethal), * (aggravated).",
+  "WOD20HM.ConfigBlurb": "Choose a character or NPC whose health and willpower this tile should mirror. Health: empty, / (bashing), X (lethal), * (aggravated). Willpower: / (maximum), X (temporary); WoD5e uses the same damage-style track as health.",
   "WOD20HM.ActorLabel": "Actor",
   "WOD20HM.NoActorOption": "— None —",
   "WOD20HM.Save": "Save",

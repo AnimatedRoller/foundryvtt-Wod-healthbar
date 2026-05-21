@@ -5,9 +5,11 @@ import {
 } from "./constants.js";
 import { getMonitorFlags, mergeDefaultFlags } from "./flags.js";
 import {
+  countWillpowerSvgRows,
   getHealthSvgLayout,
   getHealthTextureDimensions,
   parseHealthTrackFromActor,
+  parseWillpowerTrackFromActor,
 } from "./health-svg.js";
 
 function dialogRoot(html) {
@@ -69,8 +71,13 @@ export async function openHealthConfigDialog(tileDocument) {
 
               const actor = id ? game.actors.get(id) : null;
               const parsed = actor ? parseHealthTrackFromActor(actor) : null;
-              const trackLen = parsed ? parsed.track.length : null;
-              const rows = parsed?.secondaryTrack ? 2 : 1;
+              const willpower = actor ? parseWillpowerTrackFromActor(actor) : null;
+              const willLen = willpower?.track?.length ?? 0;
+              const trackLen = parsed
+                ? Math.max(parsed.track.length, willLen)
+                : null;
+              const healthRows = parsed?.secondaryTrack ? 2 : 1;
+              const willpowerRows = willpower ? countWillpowerSvgRows(willpower) : 0;
               const layout = actor ? getHealthSvgLayout(actor) : { hideLevelLabels: false, showDicePenalty: false };
               const boxes =
                 trackLen && trackLen > 0 ? trackLen : 7;
@@ -80,7 +87,8 @@ export async function openHealthConfigDialog(tileDocument) {
                 next.boxHeight || DEFAULT_BOX_HEIGHT,
                 {
                   mode: actor ? "normal" : "unlinked",
-                  rows,
+                  rows: healthRows,
+                  extraRows: willpowerRows,
                   hideLevelLabels: layout.hideLevelLabels,
                   showDicePenalty: layout.showDicePenalty,
                 }
