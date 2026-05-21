@@ -50,7 +50,7 @@ The tile resizes to match that actor’s health **track length** and shows the s
 | Lethal | **X** |
 | Aggravated | **\*** |
 
-Changing health or willpower on the **actor sheet** updates **every** tile linked to that actor. WoD20/worldofdarkness willpower shows **maximum** (/) and **temporary** (X) rows; WoD5e uses the same superficial/aggravated track style as health.
+Changing health or willpower on the **actor sheet** updates **every** tile linked to that actor. Willpower is a **single row** with one box per maximum willpower; **X** marks temporary willpower (WoD5e uses the same superficial/aggravated track style as health).
 
 ### 3. Change or remove the link later
 

@@ -68,7 +68,8 @@ export function parseHealthTrackFromActor(actor) {
   const expectedBoxes = getExpectedHealthBoxCount(systemData, actorType);
   if (Array.isArray(raw)) {
     const parsed = raw.map((v) => String(v));
-    while (parsed.length < expectedBoxes) parsed.push("healthy");
+    const targetLen = parsed.length > 0 ? parsed.length : expectedBoxes;
+    while (parsed.length < targetLen) parsed.push("healthy");
     const secondaryTrack =
       actorType === "Changeling"
         ? buildTrackFromDamageNode(systemData?.health?.damage?.chimerical, expectedBoxes)
@@ -245,17 +246,24 @@ function resolveWillpowerNode(actor) {
   return null;
 }
 
-function buildWillpowerFromWod20Advantage(node) {
-  const max = Math.max(1, asNonNegativeInt(node?.max) || 1);
+/**
+ * WoD20/worldofdarkness: permanent rating is how many boxes the sheet shows.
+ */
+function getWod20WillpowerBoxCount(node) {
   const permanent = asNonNegativeInt(node?.permanent);
+  const max = asNonNegativeInt(node?.max);
+  if (permanent > 0) return permanent;
+  return Math.max(1, max || 1);
+}
+
+function buildWillpowerFromWod20Advantage(node) {
+  const boxCount = getWod20WillpowerBoxCount(node);
   const temporary = asNonNegativeInt(node?.temporary);
-  const permanentTrack = Array(max).fill("healthy");
-  const temporaryTrack = Array(max).fill("healthy");
-  for (let i = 0; i < max; i++) {
-    if (i < permanent) permanentTrack[i] = "bashing";
-    if (temporary > i) temporaryTrack[i] = "lethal";
+  const track = Array(boxCount).fill("healthy");
+  for (let i = 0; i < boxCount; i++) {
+    if (temporary > i) track[i] = "lethal";
   }
-  return { track: permanentTrack, secondaryTrack: temporaryTrack, valid: true };
+  return { track, valid: true };
 }
 
 /**
@@ -264,24 +272,19 @@ function buildWillpowerFromWod20Advantage(node) {
 export function parseWillpowerTrackFromActor(actor) {
   const resolved = resolveWillpowerNode(actor);
   if (!resolved) {
-    return { track: null, secondaryTrack: null, valid: false, rowCount: 0 };
+    return { track: null, valid: false, rowCount: 0 };
   }
   if (resolved.kind === "wod5e") {
     const track = buildTrackFromWod5ePool(resolved.node);
-    return { track, secondaryTrack: null, valid: true, rowCount: 1 };
+    return { track, valid: true, rowCount: 1 };
   }
   const built = buildWillpowerFromWod20Advantage(resolved.node);
-  return {
-    track: built.track,
-    secondaryTrack: built.secondaryTrack,
-    valid: built.valid,
-    rowCount: 2,
-  };
+  return { track: built.track, valid: built.valid, rowCount: 1 };
 }
 
 export function countWillpowerSvgRows(willpowerParsed) {
   if (!willpowerParsed?.valid || !willpowerParsed.track?.length) return 0;
-  return willpowerParsed.secondaryTrack ? 2 : 1;
+  return 1;
 }
 
 /**
@@ -451,22 +454,12 @@ export function generateHealthSVG(
     ? options.secondaryTrack
     : null;
   const willpower = options.willpower ?? null;
-  const willpowerRows = willpower?.track?.length
-    ? willpower.secondaryTrack
-      ? 2
-      : 1
-    : 0;
+  const willpowerRows = willpower?.track?.length ? 1 : 0;
   const healthRows = secondaryTrack ? 2 : 1;
   const hideLevelLabels = options.hideLevelLabels === true;
   const labelUnder = hideLevelLabels ? 0 : LEVEL_LABEL_HEIGHT;
   const showDicePenalty =
     mode === "normal" && options.showDicePenalty === true;
-<<<<<<< HEAD
-=======
-  const rowStride = boxHeight + labelUnder + ROW_GAP;
-  const n = Math.max(1, healthTrack?.length ?? 0);
-  const totalW = n * boxWidth + (n - 1) * HEALTH_BOX_GAP;
->>>>>>> parent of 3b366f5 (accidently had 2 rows showing for willpower)
   const primaryLevelLabels = Array.isArray(options.levelLabels)
     ? options.levelLabels
     : null;
@@ -474,7 +467,6 @@ export function generateHealthSVG(
     ? options.secondaryLevelLabels
     : primaryLevelLabels;
   const boxes = [];
-<<<<<<< HEAD
 
   const rowSpecs = [
     {
@@ -527,10 +519,6 @@ export function generateHealthSVG(
       hideLabels: rowHideLabels = false,
     } = spec;
     const rowW = rowWidth(n);
-=======
-  const buildRow = (track, rowIndex, rowLabel, labelsForRow) => {
-    const rowY = rowIndex * rowStride;
->>>>>>> parent of 3b366f5 (accidently had 2 rows showing for willpower)
     const row = [];
     if (rowLabel) {
       row.push(
@@ -576,7 +564,6 @@ export function generateHealthSVG(
     return row.join("\n");
   };
 
-<<<<<<< HEAD
   let rowY = 0;
   for (let r = 0; r < rowSpecs.length; r++) {
     const spec = rowSpecs[r];
@@ -585,40 +572,6 @@ export function generateHealthSVG(
       hideLevelLabels || spec.hideLabels ? 0 : LEVEL_LABEL_HEIGHT;
     rowY += boxHeight + labelBand;
     if (r < rowSpecs.length - 1) rowY += ROW_GAP;
-=======
-  boxes.push(
-    buildRow(
-      healthTrack,
-      0,
-      secondaryTrack ? "Human" : "",
-      primaryLevelLabels
-    )
-  );
-  if (secondaryTrack) {
-    boxes.push(
-      buildRow(secondaryTrack, 1, "Chimerical", secondaryLevelLabels)
-    );
-  }
-
-  if (willpower?.track?.length) {
-    const wpLen = willpower.track.length;
-    const wpTrack = [...willpower.track];
-    while (wpTrack.length < n) wpTrack.push("healthy");
-    const wpSlice = wpTrack.slice(0, n);
-    let wpSecondary = null;
-    if (willpower.secondaryTrack) {
-      wpSecondary = [...willpower.secondaryTrack];
-      while (wpSecondary.length < n) wpSecondary.push("healthy");
-      wpSecondary = wpSecondary.slice(0, n);
-    }
-    const wpStart = healthRows;
-    if (wpSecondary) {
-      boxes.push(buildRow(wpSlice, wpStart, "Willpower (max)", null));
-      boxes.push(buildRow(wpSecondary, wpStart + 1, "Willpower (temp)", null));
-    } else {
-      boxes.push(buildRow(wpSlice, wpStart, "Willpower", null));
-    }
->>>>>>> parent of 3b366f5 (accidently had 2 rows showing for willpower)
   }
 
   let totalH = rowY;

@@ -25,10 +25,13 @@ function syncTrackToLength(track, len) {
   return out;
 }
 
-function resolveBoxCount(rawNumBoxes, parsedTrackLength) {
-  const actorLen = Math.max(1, parsedTrackLength || DEFAULT_FALLBACK_BOXES);
-  const stored = rawNumBoxes != null ? Math.max(1, Number(rawNumBoxes) || actorLen) : null;
-  return Math.max(actorLen, stored ?? actorLen);
+/** Tile width uses the widest row; each row keeps its own box count. */
+function resolveTileWidthBoxes(healthLen, willpowerLen) {
+  return Math.max(
+    1,
+    healthLen || DEFAULT_FALLBACK_BOXES,
+    willpowerLen || 0
+  );
 }
 
 /**
@@ -65,25 +68,19 @@ async function refreshHealthMonitorTileImpl(tileDocument) {
   } else {
     const parsed = parseHealthTrackFromActor(actor);
     const willpower = parseWillpowerTrackFromActor(actor);
-    const willLen = willpower.track?.length ?? 0;
-    const len = resolveBoxCount(
-      raw.numBoxes,
-      Math.max(parsed.track.length, willLen)
-    );
-    track = syncTrackToLength(parsed.track, len);
+    const healthLen = Math.max(1, parsed.track.length);
+    const willLen = willpower.valid ? willpower.track.length : 0;
+    const tileWidthBoxes = resolveTileWidthBoxes(healthLen, willLen);
+
+    track = syncTrackToLength(parsed.track, healthLen);
     let secondaryTrack = Array.isArray(parsed.secondaryTrack)
-      ? syncTrackToLength(parsed.secondaryTrack, len)
+      ? syncTrackToLength(parsed.secondaryTrack, healthLen)
       : null;
 
     const layout = getHealthSvgLayout(actor);
     const willpowerPayload =
       willpower.valid && willpower.track
-        ? {
-            track: syncTrackToLength(willpower.track, len),
-            secondaryTrack: willpower.secondaryTrack
-              ? syncTrackToLength(willpower.secondaryTrack, len)
-              : null,
-          }
+        ? { track: [...willpower.track] }
         : null;
 
     const svg = generateHealthSVG(track, boxW, boxH, {
@@ -94,9 +91,9 @@ async function refreshHealthMonitorTileImpl(tileDocument) {
       hideLevelLabels: layout.hideLevelLabels,
       showDicePenalty: layout.showDicePenalty,
       dicePenalty: parsed.dicePenalty ?? 0,
-      levelLabels: trimLevelLabelsToTrack(parsed.levelLabels, len),
+      levelLabels: trimLevelLabelsToTrack(parsed.levelLabels, healthLen),
       secondaryLevelLabels: secondaryTrack
-        ? trimLevelLabelsToTrack(parsed.secondaryLevelLabels, len)
+        ? trimLevelLabelsToTrack(parsed.secondaryLevelLabels, healthLen)
         : undefined,
     });
     let src;
@@ -109,9 +106,9 @@ async function refreshHealthMonitorTileImpl(tileDocument) {
       );
       return;
     }
-    const flagPatch = { ...raw, numBoxes: len };
+    const flagPatch = { ...raw, numBoxes: tileWidthBoxes };
     const payload = { texture: { src } };
-    if (raw.numBoxes !== len) {
+    if (raw.numBoxes !== tileWidthBoxes) {
       payload.flags = { [MODULE_ID]: flagPatch };
     }
     await tileDocument.update(payload);
