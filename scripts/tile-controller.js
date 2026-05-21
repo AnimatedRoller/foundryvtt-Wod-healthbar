@@ -78,7 +78,8 @@ function endPlacementMode() {
   }
 }
 
-async function beginPlacementMode() {
+/** Begin click-to-place mode (scene control button or keybinding). */
+export async function beginPlacementMode() {
   if (!canvas?.ready || !canvas.scene) {
     ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoCanvas"));
     return;
@@ -120,31 +121,99 @@ async function beginPlacementMode() {
   window.addEventListener("keydown", placementKeyHandler, true);
 }
 
+/**
+ * Find the Tiles scene control across Foundry v12–v14 control shapes.
+ * @param {Record<string, object>|object[]} controls
+ */
+function resolveTilesControl(controls) {
+  if (!controls) return null;
+
+  if (controls.tiles) {
+    controls.tiles.tools ??= {};
+    return controls.tiles;
+  }
+
+  if (Array.isArray(controls)) {
+    const tiles = controls.find((c) => c?.name === "tiles");
+    if (tiles) {
+      tiles.tools ??= {};
+      return tiles;
+    }
+    return null;
+  }
+
+  for (const entry of Object.values(controls)) {
+    if (entry?.name === "tiles") {
+      entry.tools ??= {};
+      return entry;
+    }
+  }
+
+  return null;
+}
+
+function mayPlaceHealthMonitor() {
+  return (
+    game.user?.isGM ||
+    canvas?.scene?.canUserModify?.(game.user, "update")
+  );
+}
+
+function onPlaceHealthMonitorTool(_event, active) {
+  if (active === false) return;
+  if (!mayPlaceHealthMonitor()) {
+    ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
+    return;
+  }
+  void beginPlacementMode();
+}
+
+function registerPlaceHealthMonitorTool(tilesControl) {
+  const tools = tilesControl.tools;
+  const orders = Object.values(tools).map((t) => Number(t?.order) || 0);
+  const order = orders.length ? Math.min(...orders) - 1 : 0;
+
+  tools.wod20HealthMonitor = {
+    name: "wod20HealthMonitor",
+    title: game.i18n?.localize?.("WOD20HM.PlaceHealthMonitor") ?? "Place Health Monitor",
+    icon: "fa-solid fa-heart-pulse",
+    order,
+    button: true,
+    visible: mayPlaceHealthMonitor(),
+    onChange: onPlaceHealthMonitorTool,
+    onClick: onPlaceHealthMonitorTool,
+  };
+}
+
 export function registerSceneControls() {
   Hooks.on("getSceneControlButtons", (controls) => {
-    const tiles = controls?.tiles;
-    if (!tiles?.tools) return;
+    const tiles = resolveTilesControl(controls);
+    if (!tiles?.tools) {
+      console.warn(
+        `${MODULE_ID} | Could not find Tiles scene controls; use the keybinding (default Alt+H) or check the module is enabled.`
+      );
+      return;
+    }
+    registerPlaceHealthMonitorTool(tiles);
+  });
+}
 
-    tiles.tools.wod20HealthMonitor = {
-      name: "wod20HealthMonitor",
-      title: game.i18n?.localize?.("WOD20HM.PlaceHealthMonitor") ?? "Place Health Monitor",
-      icon: "fa-solid fa-heart-pulse",
-      order: Object.keys(tiles.tools).length,
-      button: true,
-      visible: true,
-      onChange: () => {
-        const mayEdit =
-          game.user?.isGM ||
-          canvas?.scene?.canUserModify?.(game.user, "update");
-        if (!mayEdit) {
-          ui.notifications?.warn(
-            game.i18n.localize("WOD20HM.ErrNoPermission")
-          );
-          return;
-        }
-        void beginPlacementMode();
-      },
-    };
+export function registerPlacementKeybinding() {
+  if (!game.keybindings) return;
+  game.keybindings.register(MODULE_ID, "placeHealthMonitor", {
+    name: "WOD20HM.PlaceHealthMonitor",
+    hint: "WOD20HM.KeybindPlaceHint",
+    editable: [{ key: "KeyH", modifiers: ["ALT"] }],
+    restricted: false,
+    precedence: CONST.KEYBINDING_PRECEDENCE_NORMAL ?? 0,
+    onDown: () => {
+      if (!mayPlaceHealthMonitor()) {
+        ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
+        return false;
+      }
+      void beginPlacementMode();
+      return true;
+    },
   });
 }
 

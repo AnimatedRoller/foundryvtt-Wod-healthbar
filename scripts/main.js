@@ -1,6 +1,7 @@
 import { MODULE_ID } from "./constants.js";
 import {
   registerActorAndTileHooks,
+  registerPlacementKeybinding,
   registerReadyWarnings,
   registerSceneControls,
   registerTileUiHooks,
@@ -14,5 +15,8 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", () => {
-  console.log(`${MODULE_ID} | WoD20 Health Monitor ready.`);
+  registerPlacementKeybinding();
+  console.log(
+    `${MODULE_ID} | WoD20 Health Monitor ready. Tiles tool: heart-pulse icon, or keybind Alt+H.`
+  );
 });

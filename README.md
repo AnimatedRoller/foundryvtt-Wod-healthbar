@@ -28,12 +28,21 @@ A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for **World
 
 ### 1. Place a health monitor tile
 
-1. Open the **Tiles** layer (tiles icon in the scene controls).
-2. Click **Place Health Monitor** (heart-pulse icon) in the tiles tool strip.
-3. Foundry switches focus to the tiles layer if needed. **Left-click** where you want the tile on the scene.
-4. A new tile appears (placeholder row of **?** boxes) and the **Health Monitor — Link Actor** dialog opens.
+**Option A — Tiles tool (left sidebar)**
 
-**Cancel placement:** press **Esc**, or choose another tool (e.g. tile **Select**). You can also end placement from the same control strip.
+1. Open a **scene** on the canvas (not just the world view).
+2. Click the **Tiles** layer in the left scene controls (stacked-squares icon).
+3. In the **tool strip** that appears (along the top or side of the canvas, depending on Foundry version), click **Place Health Monitor** (heart-pulse icon). It is usually the first tool in that strip.
+4. **Left-click** on the scene where you want the tile.
+
+**Option B — Keybinding**
+
+1. Open a scene, then press **Alt+H** (default). You can change this under **Configure Controls** → **WoD20 Health Monitor**.
+2. **Left-click** on the scene to place the tile.
+
+After placing, the **Health Monitor — Link Actor** dialog opens. A new tile shows a placeholder row of **?** boxes until you link an actor.
+
+**Cancel placement:** press **Esc**, or choose another tool (e.g. tile **Select**).
 
 ### 2. Link an actor
 
@@ -73,7 +82,7 @@ You can link **several** tiles to the **same** actor. All of them refresh when t
 
 | Issue | What to check |
 |--------|----------------|
-| **Place Health Monitor** does not appear | Confirm you are on the **Tiles** layer with permission to edit the scene; restart Foundry after install if the package list looks stale. |
+| **Place Health Monitor** does not appear | You must have a **scene open** and select the **Tiles** layer. Check the horizontal tool strip above/near the canvas (Foundry v13–14 moved tools out of the left sidebar). Try **Alt+H** or assign a key under **Configure Controls**. Confirm the module is **enabled** and you are GM (or can edit scene tiles). |
 | Nothing happens when placing | Stay on the **Tiles** layer; placement listens while that layer is active. Use **Esc** and try the tool again. |
 | Tile shows “Linked actor missing” | The linked actor was **deleted** from the world. Open **Link Actor / Configure** and link a valid actor or **Unlink**. |
 | Symbols do not match the sheet | The module reads `actor.system.health.track`. If your sheet or modules store health elsewhere, they may not match until data matches the WoD20 shape described in the module specification. |
