@@ -142,14 +142,26 @@ function invokePlaceHealthMonitor() {
  */
 function getTilesControl(controls) {
   if (!controls) return null;
+
   if (Array.isArray(controls)) {
     return controls.find((c) => c?.name === "tiles") ?? null;
   }
-  return controls.tiles ?? null;
+
+  if (controls instanceof Map) {
+    return controls.get("tiles") ?? null;
+  }
+
+  if (controls.tiles) return controls.tiles;
+
+  for (const entry of Object.values(controls)) {
+    if (entry?.name === "tiles") return entry;
+  }
+
+  return null;
 }
 
 function upsertPlaceHealthMonitorTool(tilesControl) {
-  if (!tilesControl?.tools) return;
+  if (!tilesControl?.tools) return false;
 
   const title =
     game.i18n?.localize?.("WOD20HM.PlaceHealthMonitor") ?? "Place Health Monitor";
@@ -167,24 +179,39 @@ function upsertPlaceHealthMonitorTool(tilesControl) {
     const idx = tilesControl.tools.findIndex((t) => t?.name === tool.name);
     if (idx >= 0) tilesControl.tools[idx] = { ...tilesControl.tools[idx], ...tool };
     else tilesControl.tools.push(tool);
-    return;
+  } else {
+    const orders = Object.values(tilesControl.tools).map((t) => Number(t?.order) || 0);
+    tool.order = orders.length ? Math.max(...orders) + 1 : 0;
+    tilesControl.tools[tool.name] = tool;
   }
 
-  const orders = Object.values(tilesControl.tools).map((t) => Number(t?.order) || 0);
-  tool.order = orders.length ? Math.max(...orders) + 1 : 0;
-  tilesControl.tools[tool.name] = tool;
+  return true;
+}
+
+function registerPlaceToolOnSceneControls(controls) {
+  const tiles = getTilesControl(controls);
+  if (!tiles) return false;
+  return upsertPlaceHealthMonitorTool(tiles);
 }
 
 export function registerSceneControls() {
   Hooks.on("getSceneControlButtons", (controls) => {
-    const tiles = getTilesControl(controls);
-    if (!tiles) {
+    if (registerPlaceToolOnSceneControls(controls)) {
+      console.log(`${MODULE_ID} | Registered Place Health Monitor on Tiles toolbar.`);
+    } else {
       console.warn(
         `${MODULE_ID} | Tiles scene control not found; use Game Settings → Module Settings → WoD20 Health Monitor (cog) or Ctrl+Shift+P.`
       );
-      return;
     }
-    upsertPlaceHealthMonitorTool(tiles);
+  });
+
+  // Rebuild scene controls after canvas is ready (v13 timing).
+  Hooks.on("canvasReady", () => {
+    try {
+      ui.controls?.initialize?.({ layer: "tiles" });
+    } catch (_) {
+      /* ignore */
+    }
   });
 }
 
