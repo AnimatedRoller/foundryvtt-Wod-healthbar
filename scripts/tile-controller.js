@@ -78,8 +78,7 @@ function endPlacementMode() {
   }
 }
 
-/** Begin click-to-place mode (scene control button, keybinding, or settings menu). */
-export async function beginPlacementMode() {
+async function beginPlacementMode() {
   if (!canvas?.ready || !canvas.scene) {
     ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoCanvas"));
     return;
@@ -121,93 +120,31 @@ export async function beginPlacementMode() {
   window.addEventListener("keydown", placementKeyHandler, true);
 }
 
-/**
- * Find the Tiles scene control across Foundry v12–v14 control shapes.
- * @param {Record<string, object>|Map|object[]} controls
- */
-export function resolveTilesControl(controls) {
-  if (!controls) return null;
-
-  if (controls instanceof Map) {
-    const tiles = controls.get("tiles");
-    if (tiles) {
-      tiles.tools ??= {};
-      return tiles;
-    }
-  }
-
-  if (controls.tiles) {
-    controls.tiles.tools ??= {};
-    return controls.tiles;
-  }
-
-  if (Array.isArray(controls)) {
-    const tiles = controls.find((c) => c?.name === "tiles");
-    if (tiles) {
-      tiles.tools ??= {};
-      return tiles;
-    }
-    return null;
-  }
-
-  for (const entry of Object.values(controls)) {
-    if (entry?.name === "tiles") {
-      entry.tools ??= {};
-      return entry;
-    }
-  }
-
-  return null;
-}
-
-export function mayPlaceHealthMonitor() {
-  return (
-    game.user?.isGM ||
-    canvas?.scene?.canUserModify?.(game.user, "update")
-  );
-}
-
-function invokePlaceHealthMonitorTool() {
-  if (!mayPlaceHealthMonitor()) {
-    ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
-    return;
-  }
-  void beginPlacementMode();
-}
-
-function onPlaceHealthMonitorTool(_event, active) {
-  if (active === false) return;
-  invokePlaceHealthMonitorTool();
-}
-
-/** @param {{ tools: Record<string, object> }} tilesControl */
-export function registerPlaceHealthMonitorOnControl(tilesControl) {
-  const tools = tilesControl.tools;
-  const orders = Object.values(tools).map((t) => Number(t?.order) || 0);
-  const order = orders.length ? Math.max(...orders) + 1 : 0;
-
-  tools.wod20HealthMonitor = {
-    name: "wod20HealthMonitor",
-    title: game.i18n?.localize?.("WOD20HM.PlaceHealthMonitor") ?? "Place Health Monitor",
-    icon: "fas fa-heart-pulse",
-    order,
-    button: true,
-    visible: true,
-    onClick: invokePlaceHealthMonitorTool,
-    onChange: onPlaceHealthMonitorTool,
-  };
-}
-
 export function registerSceneControls() {
   Hooks.on("getSceneControlButtons", (controls) => {
-    const tiles = resolveTilesControl(controls);
-    if (!tiles?.tools) {
-      console.warn(
-        `${MODULE_ID} | Could not register Tiles tool; use Game Settings → Module Settings → WoD20 Health Monitor (cog), Ctrl+Shift+P, or /phm in chat.`
-      );
-      return;
-    }
-    registerPlaceHealthMonitorOnControl(tiles);
+    const tiles = controls?.tiles;
+    if (!tiles?.tools) return;
+
+    tiles.tools.wod20HealthMonitor = {
+      name: "wod20HealthMonitor",
+      title: game.i18n?.localize?.("WOD20HM.PlaceHealthMonitor") ?? "Place Health Monitor",
+      icon: "fa-solid fa-heart-pulse",
+      order: Object.keys(tiles.tools).length,
+      button: true,
+      visible: true,
+      onChange: () => {
+        const mayEdit =
+          game.user?.isGM ||
+          canvas?.scene?.canUserModify?.(game.user, "update");
+        if (!mayEdit) {
+          ui.notifications?.warn(
+            game.i18n.localize("WOD20HM.ErrNoPermission")
+          );
+          return;
+        }
+        void beginPlacementMode();
+      },
+    };
   });
 }
 
