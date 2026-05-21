@@ -35,9 +35,21 @@ A [Foundry Virtual Tabletop](https://foundryvtt.com/) **v13** module for **World
 3. In the **tool strip** that appears (along the top or side of the canvas, depending on Foundry version), click **Place Health Monitor** (heart-pulse icon). It is usually the first tool in that strip.
 4. **Left-click** on the scene where you want the tile.
 
-**Option B — Keybinding**
+**Option B — Game Settings menu (most reliable)**
 
-1. Open a scene, then press **Alt+H** (default). You can change this under **Configure Controls** → **WoD20 Health Monitor**.
+1. Open **Game Settings** (gear icon in the right sidebar).
+2. Under **Module Settings**, find **WoD20 Health Monitor** → **Place Health Monitor**.
+3. Click **Place Health Monitor**, then **left-click** on the scene.
+
+**Option C — Keybinding**
+
+1. Open a scene, then press **Alt+H** (default).
+2. Assign or change it under **Game Settings** → **Configure Controls**, then filter for **WoD20** or **Place Health Monitor**.
+3. **Left-click** on the scene to place the tile.
+
+**Option D — Chat command**
+
+1. In chat, type `/phm` or `/place-health-monitor` and press Enter.
 2. **Left-click** on the scene to place the tile.
 
 After placing, the **Health Monitor — Link Actor** dialog opens. A new tile shows a placeholder row of **?** boxes until you link an actor.
@@ -82,7 +94,8 @@ You can link **several** tiles to the **same** actor. All of them refresh when t
 
 | Issue | What to check |
 |--------|----------------|
-| **Place Health Monitor** does not appear | You must have a **scene open** and select the **Tiles** layer. Check the horizontal tool strip above/near the canvas (Foundry v13–14 moved tools out of the left sidebar). Try **Alt+H** or assign a key under **Configure Controls**. Confirm the module is **enabled** and you are GM (or can edit scene tiles). |
+| **Place Health Monitor** does not appear | Use **Game Settings** → **WoD20 Health Monitor** → **Place Health Monitor**, or chat `/phm`. For the toolbar: open a **scene**, select **Tiles**, then check the tool strip on the canvas edge. Keybind: **Configure Controls**, filter **WoD20**. Confirm the module is **enabled**. |
+| Console spam from **parallax-tiles** | That module errors on monitor tiles; v1.0.22 marks them ignored. Update both modules or temporarily disable parallax-tiles if it persists. |
 | Nothing happens when placing | Stay on the **Tiles** layer; placement listens while that layer is active. Use **Esc** and try the tool again. |
 | Tile shows “Linked actor missing” | The linked actor was **deleted** from the world. Open **Link Actor / Configure** and link a valid actor or **Unlink**. |
 | Symbols do not match the sheet | The module reads `actor.system.health.track`. If your sheet or modules store health elsewhere, they may not match until data matches the WoD20 shape described in the module specification. |

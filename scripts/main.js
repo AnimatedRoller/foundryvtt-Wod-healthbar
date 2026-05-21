@@ -1,7 +1,11 @@
 import { MODULE_ID } from "./constants.js";
 import {
-  registerActorAndTileHooks,
+  registerPlacementAccess,
   registerPlacementKeybinding,
+  registerPlacementSettingsMenu,
+} from "./placement-access.js";
+import {
+  registerActorAndTileHooks,
   registerReadyWarnings,
   registerSceneControls,
   registerTileUiHooks,
@@ -12,11 +16,13 @@ Hooks.once("init", () => {
   registerActorAndTileHooks();
   registerTileUiHooks();
   registerReadyWarnings();
+  registerPlacementKeybinding();
+  registerPlacementAccess();
+  registerPlacementSettingsMenu();
 });
 
 Hooks.once("ready", () => {
-  registerPlacementKeybinding();
   console.log(
-    `${MODULE_ID} | WoD20 Health Monitor ready. Tiles tool: heart-pulse icon, or keybind Alt+H.`
+    `${MODULE_ID} | Ready. Place via Tiles (heart icon), Alt+H, chat /phm, or Game Settings → ${game.modules.get(MODULE_ID)?.title ?? MODULE_ID} → Place Health Monitor.`
   );
 });

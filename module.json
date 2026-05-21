@@ -11,8 +11,20 @@
     "minimum": "13",
     "verified": "14"
   },
-  "version": "1.0.21",
+  "version": "1.0.22",
   "esmodules": ["scripts/main.js"],
+  "keybindings": {
+    "placeHealthMonitor": {
+      "name": "WOD20HM.PlaceHealthMonitor",
+      "hint": "WOD20HM.KeybindPlaceHint",
+      "editable": [
+        {
+          "key": "KeyH",
+          "modifiers": ["ALT"]
+        }
+      ]
+    }
+  },
   "styles": ["styles/health-monitor.css"],
   "languages": [
     {

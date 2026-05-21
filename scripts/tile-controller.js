@@ -54,6 +54,7 @@ export async function createHealthMonitorTileAt(canvasPoint) {
           boxHeight: boxH,
           numBoxes: num,
         },
+        "parallax-tiles": { ignore: true },
       },
     },
   ]);
@@ -128,6 +129,14 @@ export async function beginPlacementMode() {
 function resolveTilesControl(controls) {
   if (!controls) return null;
 
+  if (controls instanceof Map) {
+    const tiles = controls.get("tiles");
+    if (tiles) {
+      tiles.tools ??= {};
+      return tiles;
+    }
+  }
+
   if (controls.tiles) {
     controls.tiles.tools ??= {};
     return controls.tiles;
@@ -152,7 +161,7 @@ function resolveTilesControl(controls) {
   return null;
 }
 
-function mayPlaceHealthMonitor() {
+export function mayPlaceHealthMonitor() {
   return (
     game.user?.isGM ||
     canvas?.scene?.canUserModify?.(game.user, "update")
@@ -171,7 +180,7 @@ function onPlaceHealthMonitorTool(_event, active) {
 function registerPlaceHealthMonitorTool(tilesControl) {
   const tools = tilesControl.tools;
   const orders = Object.values(tools).map((t) => Number(t?.order) || 0);
-  const order = orders.length ? Math.min(...orders) - 1 : 0;
+  const order = orders.length ? Math.max(...orders) + 1 : 0;
 
   tools.wod20HealthMonitor = {
     name: "wod20HealthMonitor",
@@ -179,9 +188,8 @@ function registerPlaceHealthMonitorTool(tilesControl) {
     icon: "fa-solid fa-heart-pulse",
     order,
     button: true,
-    visible: mayPlaceHealthMonitor(),
+    visible: true,
     onChange: onPlaceHealthMonitorTool,
-    onClick: onPlaceHealthMonitorTool,
   };
 }
 
@@ -195,25 +203,6 @@ export function registerSceneControls() {
       return;
     }
     registerPlaceHealthMonitorTool(tiles);
-  });
-}
-
-export function registerPlacementKeybinding() {
-  if (!game.keybindings) return;
-  game.keybindings.register(MODULE_ID, "placeHealthMonitor", {
-    name: "WOD20HM.PlaceHealthMonitor",
-    hint: "WOD20HM.KeybindPlaceHint",
-    editable: [{ key: "KeyH", modifiers: ["ALT"] }],
-    restricted: false,
-    precedence: CONST.KEYBINDING_PRECEDENCE_NORMAL ?? 0,
-    onDown: () => {
-      if (!mayPlaceHealthMonitor()) {
-        ui.notifications?.warn(game.i18n.localize("WOD20HM.ErrNoPermission"));
-        return false;
-      }
-      void beginPlacementMode();
-      return true;
-    },
   });
 }
 
